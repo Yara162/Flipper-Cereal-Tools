@@ -30,7 +30,12 @@ void settings_load(SerialConfig* cfg) {
     storage_file_free(file);
     furi_record_close(RECORD_STORAGE);
 
-    for(char* line = strtok(buf, "\n"); line; line = strtok(NULL, "\n")) {
+    char* next = buf;
+    while(next && *next) {
+        char* line = next;
+        char* nl = strchr(line, '\n');
+        if(nl) *nl = 0;
+        next = nl ? nl + 1 : NULL;
         char* eq = strchr(line, '=');
         if(!eq) continue;
         *eq = 0;
