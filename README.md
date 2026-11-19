@@ -219,13 +219,13 @@ More brands follow in later releases.
 
 | Item | Status |
 |---|---|
-| Echo | Not yet run on hardware |
-| Sniffer | Not yet run on hardware |
-| Custom commands | Not yet run on hardware |
+| Echo | **Tested working** on hardware (9600 8-N-1, against a PC serial port) |
+| Sniffer | **Tested working** on hardware (9600 8-N-1, against a PC serial port) |
+| Custom commands | Crashes on opening, like Projector control (see Known issues) |
 | Display control | Not yet run on hardware |
 | Projector control | Crashes with "Out of memory" on hardware (see Known issues) |
 | VISCA client and server | Not yet run on hardware |
-| Baud-rate finder | Not yet run on hardware |
+| Baud-rate finder | **Tested working** on hardware: found a PC at 9600 8-N-1, a BenQ projector at 115200 8-N-1 with the BenQ status probe, and Check cable passed |
 | Samsung MDC set | Not yet run on hardware |
 | Sony Bravia set | Not yet run on hardware |
 | LG set | Not yet run on hardware |
@@ -239,7 +239,7 @@ baud scoring, and every built-in command file) is tested on a PC.
 
 | Issue | Status |
 |---|---|
-| Opening **Projector control** crashes the Flipper with "Out of memory" | Open, found on hardware. Building the list of command files needs more memory than is free at that point. Until it is fixed, avoid Projector control. |
+| Opening **Projector control** or **Custom commands** crashes the Flipper with "Out of memory" | Open, found on hardware. Building the list of command files needs more memory than is free at that point. Until it is fixed, avoid both tools. |
 
 ## Build
 
