@@ -4,6 +4,7 @@
 #include "tool_echo.h"
 #include "tool_sniffer.h"
 #include "tool_custom.h"
+#include "tool_devices.h"
 #include "cmdset_view.h"
 #include "catalog.h"
 
@@ -83,6 +84,12 @@ static void menu_callback(void* context, uint32_t index) {
         break;
     case MenuEcho:
         app_switch(app, AppViewEcho);
+        break;
+    case MenuDisplay:
+        display_open(app);
+        break;
+    case MenuProjector:
+        projector_open(app);
         break;
     case MenuCustom:
         custom_open(app);
