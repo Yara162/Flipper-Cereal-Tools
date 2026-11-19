@@ -5,6 +5,7 @@
 #include "tool_sniffer.h"
 #include "tool_custom.h"
 #include "tool_devices.h"
+#include "tool_visca.h"
 #include "cmdset_view.h"
 #include "catalog.h"
 
@@ -94,6 +95,9 @@ static void menu_callback(void* context, uint32_t index) {
     case MenuCustom:
         custom_open(app);
         break;
+    case MenuVisca:
+        app_switch(app, AppViewVisca);
+        break;
     case MenuSniffer:
         app->settings_back = AppViewMenu;
         app_switch(app, AppViewSniffer);
@@ -167,6 +171,9 @@ int32_t cereal_tools_app(void* p) {
     app->cmdset_view = cmdset_view_alloc(app);
     view_dispatcher_add_view(app->dispatcher, AppViewCmdSet, app->cmdset_view);
 
+    app->visca_view = visca_view_alloc(app);
+    view_dispatcher_add_view(app->dispatcher, AppViewVisca, app->visca_view);
+
     view_dispatcher_attach_to_gui(app->dispatcher, app->gui, ViewDispatcherTypeFullscreen);
     if(app->port)
         app_switch(app, AppViewMenu);
@@ -186,6 +193,8 @@ int32_t cereal_tools_app(void* p) {
     sniffer_view_free(app->sniffer_view);
     view_dispatcher_remove_view(app->dispatcher, AppViewCmdSet);
     cmdset_view_free(app->cmdset_view);
+    view_dispatcher_remove_view(app->dispatcher, AppViewVisca);
+    visca_view_free(app->visca_view);
     catalog_free();
     submenu_free(app->menu);
     submenu_free(app->list);
