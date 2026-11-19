@@ -35,7 +35,8 @@ static void check_file(const char* path, const char* category) {
     }
     if(strcmp(category, "examples") != 0) {
         CHECK(strcmp(set.category, category) == 0);
-        CHECK(!set.tested);
+        // only sets confirmed on real hardware may be marked tested
+        CHECK(!set.tested || strcmp(set.id, "benq") == 0);
         CHECK(set.has_serial);
         CHECK(set.source[0] != 0);
         CHECK(strcmp(set.segment, "commercial") == 0 || strcmp(set.segment, "residential") == 0 ||

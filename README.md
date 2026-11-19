@@ -221,15 +221,15 @@ More brands follow in later releases.
 |---|---|
 | Echo | **Tested working** on hardware (9600 8-N-1, against a PC serial port) |
 | Sniffer | **Tested working** on hardware (9600 8-N-1, against a PC serial port) |
-| Custom commands | Crashes on opening, like Projector control (see Known issues) |
+| Custom commands | Opens on hardware since the memory fix; sending not yet tested |
 | Display control | Not yet run on hardware |
-| Projector control | Crashes with "Out of memory" on hardware (see Known issues) |
+| Projector control | **Tested working** on hardware (BenQ SP840 at 115200 8-N-1) |
 | VISCA client and server | Not yet run on hardware |
 | Baud-rate finder | **Tested working** on hardware: found a PC at 9600 8-N-1, a BenQ projector at 115200 8-N-1 with the BenQ status probe, and Check cable passed |
 | Samsung MDC set | Not yet run on hardware |
 | Sony Bravia set | Not yet run on hardware |
 | LG set | Not yet run on hardware |
-| BenQ set | Not yet run on hardware |
+| BenQ set | **Tested working** on a BenQ SP840: power on, power off and lamp hours |
 | Epson set | Not yet run on hardware |
 
 The protocol code (JSON reader, command building and checksums, message splitting, VISCA,
@@ -239,7 +239,8 @@ baud scoring, and every built-in command file) is tested on a PC.
 
 | Issue | Status |
 |---|---|
-| Opening **Projector control** or **Custom commands** crashes the Flipper with "Out of memory" | Found on hardware; fix waiting for a hardware test. Echo, Sniffer and the command screen held about 37 KB for the whole time the app ran, and building a list asked for about 40 KB more on top. They now hold memory only while open, and the list is built in one table, so a list now needs about 35 KB in all. |
+| Opening **Projector control** or **Custom commands** crashed the Flipper with "Out of memory" | Fixed and confirmed on hardware. Echo, Sniffer and the command screen now hold memory only while open, and the file list is built in one table. |
+| Opening a built-in list switched the port to the file's default speed | Fixed and confirmed on hardware (BenQ SP840 at 115200). |
 
 ## Build
 

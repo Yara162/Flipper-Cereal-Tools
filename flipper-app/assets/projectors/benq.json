@@ -4,8 +4,8 @@
   "name": "BenQ",
   "category": "projector",
   "segment": "",
-  "source": "BenQ TK850 RS232 Control Guide 1.01",
-  "tested": false,
+  "source": "BenQ TK850 RS232 Control Guide 1.01; tested on an SP840",
+  "tested": true,
   "notes": "BenQ projectors. Supported commands vary by model; an unsupported one answers 'Unsupported item', one that cannot run right now answers 'Block item'.",
   "serial": { "baud": 9600, "data_bits": 8, "parity": "none", "stop_bits": 1 },
   "commands": [
