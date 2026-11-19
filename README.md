@@ -166,7 +166,7 @@ built-in one, and app updates never touch your folder.
 | `name` | Shown in lists (defaults to `id`) |
 | `category` | `display` or `projector` to appear under those tools; anything else for Custom commands only |
 | `segment` | `commercial`, `residential` or `both` (displays) |
-| `serial` | Optional; applied when the file is opened |
+| `serial` | Optional. In your own files it is applied when the file is opened. In the built-in files it is only the maker's default: your current settings stay, and the status line shows the default if it differs |
 | `settings` | Up to 4 values you set on the Flipper, used as `{key}` in commands |
 | `commands` | Up to 48. Each has `name`, optional `group`, and either `hex` or `text` |
 | `expect` / `expect_text` | Optional reply to look for, as hex or text; shown as OK or UNEXPECTED |

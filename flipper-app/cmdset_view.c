@@ -1,5 +1,6 @@
 #include "cmdset_view.h"
 #include "log.h"
+#include "catalog.h"
 #include "core/render.h"
 #include "core/fmt.h"
 #include "core/reply.h"
@@ -358,12 +359,18 @@ void cmdset_view_open(App* app, const char* path, uint32_t back) {
     m->history_count = 0;
     m->status[0] = 0;
     build_rows(m);
+    // The owner's files set the port; a built-in file's serial block is only the maker's default,
+    // since installers often change it (the baud finder's result must not be overwritten).
     SerialConfig cfg = m->set->serial;
-    bool apply = m->set->has_serial;
-    if(apply) {
+    bool own_file = strncmp(path, COMMANDS_DIR "/", strlen(COMMANDS_DIR) + 1) == 0;
+    bool apply = m->set->has_serial && own_file;
+    const SerialConfig* cur = &app->config;
+    bool differs = cfg.baud != cur->baud || cfg.data_bits != cur->data_bits || cfg.parity != cur->parity ||
+                   cfg.stop_bits != cur->stop_bits;
+    if(m->set->has_serial && differs) {
         char label[24];
         serial_config_label(&cfg, label, sizeof(label));
-        snprintf(m->status, sizeof(m->status), "From file: %.24s", label);
+        snprintf(m->status, sizeof(m->status), apply ? "From file: %.24s" : "Default %.24s", label);
     }
     view_commit_model(app->cmdset_view, true);
     if(apply) app_apply_config(app, &cfg);

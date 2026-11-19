@@ -23,3 +23,6 @@ owner says otherwise.
 9. **Back from a brand list** goes to the main menu, not the Commercial/Residential choice.
 10. **Emulated VISCA camera** starts powered on and also answers focus-mode, position and
     interface-clear queries.
+11. **Built-in files do not change the serial settings.** Their `serial` block is the maker's
+    default and is shown on the status line when it differs; your own files still apply theirs.
+    (Found on a BenQ SP840 set to 115200: opening the BenQ list switched the port to 9600.)
