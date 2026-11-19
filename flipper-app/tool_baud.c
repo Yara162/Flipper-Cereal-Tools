@@ -58,7 +58,7 @@ static void draw(Canvas* canvas, void* model) {
             for(uint8_t i = 0; i < 3; i++) {
                 uint8_t c = m->best[i];
                 label(&baud_candidates[c], cfg, sizeof(cfg));
-                snprintf(buf, sizeof(buf), "%s  score %u%s", cfg, m->scores[c], m->scores[c] < 40 ? " unlikely" : "");
+                snprintf(buf, sizeof(buf), "%s  %u%s", cfg, m->scores[c], m->scores[c] < 40 ? " unlikely" : "%");
                 canvas_draw_str(canvas, 2, 23 + 10 * i, buf);
             }
         }
@@ -99,11 +99,14 @@ static void tick(App* app, void* context) {
         return;
     }
     SerialByte in[64];
-    size_t n = serial_port_read(app->port, in, COUNT_OF(in));
-    for(size_t i = 0; i < n; i++) {
-        uint8_t b = in[i].byte;
-        m->sample.bytes++;
-        if((b >= 32 && b < 127) || b == '\r' || b == '\n' || b == '\t') m->sample.printable++;
+    size_t n, total = 0;
+    while(total < SERIAL_DRAIN_MAX && (n = serial_port_read(app->port, in, COUNT_OF(in))) > 0) {
+        total += n;
+        for(size_t i = 0; i < n; i++) {
+            uint8_t b = in[i].byte;
+            m->sample.bytes++;
+            if((b >= 32 && b < 127) || b == '\r' || b == '\n' || b == '\t') m->sample.printable++;
+        }
     }
     if(furi_get_tick() - m->window_start >= WINDOW_MS) {
         SerialErrors e;

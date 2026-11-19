@@ -53,10 +53,7 @@ void msgring_draw(
                 line, sizeof(line), "%02lu:%02lu.%03lu ", (unsigned long)(t / 60000 % 100),
                 (unsigned long)(t / 1000 % 60), (unsigned long)(t % 1000));
         }
-        if(hex)
-            fmt_hex(m->data, m->len, line + n, sizeof(line) - n);
-        else
-            fmt_text(m->data, m->len, line + n, sizeof(line) - n);
+        fmt_message(m, hex, line + n, sizeof(line) - n);
         canvas_draw_str(canvas, 1, y + 9 * (i - first), line);
     }
 }

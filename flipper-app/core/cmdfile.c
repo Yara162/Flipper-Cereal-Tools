@@ -372,7 +372,12 @@ bool cmdfile_parse(const char* json, size_t len, CommandSet* out, CmdFileError* 
                 good = parse_settings(&c, v, out);
             else if(tok_is(&c, j, "commands"))
                 good = parse_commands(&c, v, out);
-            // anything else is ignored, so later versions can add fields
+            else if(!tok_is(&c, j, "notes")) {
+                // a misspelt key must not be silently ignored; new fields come with a new format
+                char key[24];
+                get_string(&c, j, key, sizeof(key), false);
+                good = fail_tok(&c, j, "Unknown field: %s", key);
+            }
         }
         if(!good) break;
         if(!has_format) {
@@ -381,6 +386,10 @@ bool cmdfile_parse(const char* json, size_t len, CommandSet* out, CmdFileError* 
         }
         if(!has_id || !out->id[0]) {
             fail(&c, 0, "Missing \"id\"", NULL);
+            break;
+        }
+        if(out->command_count == 0) {
+            fail(&c, 0, "File has no commands", NULL);
             break;
         }
         if(!has_name) strncpy(out->name, out->id, sizeof(out->name) - 1);

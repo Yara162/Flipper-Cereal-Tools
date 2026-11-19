@@ -38,10 +38,10 @@ static void draw(Canvas* canvas, void* model) {
     canvas_draw_line(canvas, 0, 54, 127, 54);
     if(m->status[0])
         snprintf(buf, sizeof(buf), "%s", m->status);
-    else if(m->errors.frame || m->errors.parity || m->errors.dropped)
+    else if(m->errors.frame || m->errors.parity || m->errors.dropped || m->errors.overrun)
         snprintf(
             buf, sizeof(buf), "Frame %lu parity %lu lost %lu", (unsigned long)m->errors.frame,
-            (unsigned long)m->errors.parity, (unsigned long)m->errors.dropped);
+            (unsigned long)m->errors.parity, (unsigned long)(m->errors.dropped + m->errors.overrun));
     else
         snprintf(buf, sizeof(buf), "OK log  < hex  > settings");
     canvas_draw_str(canvas, 1, 63, buf);
@@ -57,6 +57,7 @@ static void log_message(SnifferModel* m, const Message* msg) {
     n += (int)fmt_hex(msg->data, msg->len, line + n, MSG_MAX * 3 + 8);
     n += snprintf(line + n, 8, "  |  ");
     fmt_text(msg->data, msg->len, line + n, MSG_MAX * 4 + 8);
+    if(msg->truncated) strlcat(line, "  (continues)", MSG_MAX * 7 + 32);
     log_line(m->log, line);
     free(line);
     m->logged++;
@@ -71,13 +72,17 @@ static void add(SnifferModel* m, const Message* msg) {
 static void tick(App* app, void* context) {
     View* view = context;
     SerialByte in[64];
-    size_t n = serial_port_read(app->port, in, COUNT_OF(in));
+    size_t n, total = 0;
     SnifferModel* m = view_get_model(view);
     Message msg;
-    for(size_t i = 0; i < n; i++)
-        if(msgsplit_feed(&m->splitter, in[i].byte, in[i].at_ms, &msg)) add(m, &msg);
-    bool changed = n > 0;
-    if(msgsplit_poll(&m->splitter, furi_get_tick(), &msg)) {
+    while(total < SERIAL_DRAIN_MAX && (n = serial_port_read(app->port, in, COUNT_OF(in))) > 0) {
+        total += n;
+        for(size_t i = 0; i < n; i++)
+            if(msgsplit_feed(&m->splitter, in[i].byte, in[i].at_ms, &msg)) add(m, &msg);
+    }
+    bool changed = total > 0;
+    // only judge a quiet gap once the queue is empty, or a backlog looks like silence
+    if(total < SERIAL_DRAIN_MAX && msgsplit_poll(&m->splitter, furi_get_tick(), &msg)) {
         add(m, &msg);
         changed = true;
     }

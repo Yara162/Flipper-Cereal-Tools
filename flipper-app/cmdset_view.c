@@ -2,15 +2,14 @@
 #include "log.h"
 #include "core/render.h"
 #include "core/fmt.h"
+#include "core/reply.h"
 #include <storage/storage.h>
 
 #define FILE_MAX 8192
 #define MAX_ROWS (CMDSET_MAX_SETTINGS + CMDSET_MAX_COMMANDS * 2)
 #define LIST_LINES 5
 #define TX_MAX 128
-#define RX_MAX 256
-#define REPLY_TIMEOUT_MS 1000
-#define REPLY_QUIET_MS 150
+#define RX_MAX REPLY_MAX
 #define HISTORY 32
 
 typedef enum { RowSetting, RowHeader, RowCommand } RowKind;
@@ -52,6 +51,11 @@ typedef struct {
 } CmdSetModel;
 
 static uint32_t cmdset_back = AppViewMenu;
+static CommandSet* shared_set;
+
+CommandSet* cmdset_shared_set(void) {
+    return shared_set;
+}
 
 // --- list helpers ---
 
@@ -133,8 +137,11 @@ static void draw_result(Canvas* canvas, CmdSetModel* m) {
     canvas_draw_str_aligned(canvas, 127, 8, AlignRight, AlignBottom, verdict);
     canvas_draw_line(canvas, 0, 10, 127, 10);
     if(m->error[0]) {
+        char l1[26], l2[26];
+        fmt_wrap(m->error, 25, l1, l2);
         canvas_draw_str(canvas, 1, 22, "Not sent:");
-        canvas_draw_str(canvas, 1, 32, m->error);
+        canvas_draw_str(canvas, 1, 32, l1);
+        canvas_draw_str(canvas, 1, 41, l2);
         return;
     }
     char hex[64]; // only the start fits on screen
@@ -235,14 +242,18 @@ static void tick(App* app, void* context) {
         return;
     }
     SerialByte in[64];
-    size_t n = serial_port_read(app->port, in, COUNT_OF(in));
-    for(size_t i = 0; i < n && m->rx_len < RX_MAX; i++) m->rx[m->rx_len++] = in[i].byte;
+    size_t n, total = 0;
+    while(m->rx_len < RX_MAX && (n = serial_port_read(app->port, in, COUNT_OF(in))) > 0) {
+        for(size_t i = 0; i < n && m->rx_len < RX_MAX; i++) m->rx[m->rx_len++] = in[i].byte;
+        total += n;
+    }
+    n = total;
     uint32_t now = furi_get_tick();
     if(n) m->last_rx_at = now;
     if(m->expect_len >= 0 && render_match(m->rx, m->rx_len, m->expect, m->expect_mask, (size_t)m->expect_len))
         m->matched = true;
-    bool done = m->matched || now - m->sent_at >= REPLY_TIMEOUT_MS ||
-                (m->rx_len && now - m->last_rx_at >= REPLY_QUIET_MS) || m->rx_len >= RX_MAX;
+    // keep listening after a match: the value a status command asks for follows the prefix
+    bool done = reply_complete(m->matched, m->rx_len, m->sent_at, now, m->last_rx_at);
     if(done) {
         m->mode = ModeResult;
         remember(m);
@@ -332,9 +343,12 @@ void cmdset_view_open(App* app, const char* path, uint32_t back) {
     free(buf);
     if(!ok) {
         view_commit_model(app->cmdset_view, false);
-        char line[24];
-        snprintf(line, sizeof(line), "Line %d:", err.line);
-        app_show_message(app, "Could not load file", line, err.message, "", back);
+        char title[24], name[26], l1[26], l2[26];
+        const char* slash = strrchr(path, '/');
+        snprintf(title, sizeof(title), "Error, line %d", err.line);
+        snprintf(name, sizeof(name), "%.25s", slash ? slash + 1 : path);
+        fmt_wrap(err.message, 25, l1, l2);
+        app_show_message(app, title, name, l1, l2, back);
         return;
     }
     snprintf(m->path, sizeof(m->path), "%s", path);
@@ -361,6 +375,7 @@ View* cmdset_view_alloc(App* app) {
     CmdSetModel* m = view_get_model(view);
     m->set = malloc(sizeof(CommandSet));
     memset(m->set, 0, sizeof(CommandSet));
+    shared_set = m->set;
     view_commit_model(view, false);
     view_set_draw_callback(view, draw);
     view_set_input_callback(view, input);
@@ -372,6 +387,7 @@ View* cmdset_view_alloc(App* app) {
 void cmdset_view_free(View* view) {
     CmdSetModel* m = view_get_model(view);
     free(m->set);
+    shared_set = NULL;
     view_commit_model(view, false);
     view_free(view);
 }

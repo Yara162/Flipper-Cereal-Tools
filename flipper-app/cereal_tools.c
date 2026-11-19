@@ -72,7 +72,10 @@ static void message_draw(Canvas* canvas, void* model) {
 static bool message_input(InputEvent* event, void* context) {
     App* app = context;
     if(event->key == InputKeyBack && event->type == InputTypeShort) {
-        app_switch(app, app->message_back);
+        if(app->message_back == VIEW_NONE)
+            view_dispatcher_stop(app->dispatcher); // e.g. the serial port was busy: quit the app
+        else
+            app_switch(app, app->message_back);
         return true;
     }
     return false;

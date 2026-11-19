@@ -1,6 +1,7 @@
 #include "catalog.h"
 #include "cmdset_view.h"
 #include <storage/storage.h>
+#include "core/fmt.h"
 
 #define FILE_MAX 8192
 
@@ -82,7 +83,7 @@ static size_t scan_dir(
 
 size_t catalog_scan(const char* category, bool include_builtin, const char* segment, CatalogEntry* out, size_t max) {
     Storage* storage = furi_record_open(RECORD_STORAGE);
-    CommandSet* set = malloc(sizeof(CommandSet));
+    CommandSet* set = cmdset_shared_set(); // the command screen is not showing while lists are built
     char* buf = malloc(FILE_MAX);
     CatalogEntry* builtin = malloc(sizeof(CatalogEntry) * CATALOG_MAX);
     CatalogEntry* user = malloc(sizeof(CatalogEntry) * CATALOG_MAX);
@@ -97,7 +98,6 @@ size_t catalog_scan(const char* category, bool include_builtin, const char* segm
     free(builtin);
     free(user);
     free(buf);
-    free(set);
     furi_record_close(RECORD_STORAGE);
     return n;
 }
@@ -129,9 +129,11 @@ static void pick(void* context, uint32_t index) {
     if(!picker || index >= picker->count) return;
     const CatalogEntry* e = &picker->entries[index];
     if(e->broken) {
-        char line[40];
-        snprintf(line, sizeof(line), "Line %d:", e->error_line);
-        app_show_message(app, e->name, line, e->error, "Fix it in qFlipper.", AppViewList);
+        char title[24], name[26], l1[26], l2[26];
+        snprintf(title, sizeof(title), "Error, line %d", e->error_line);
+        snprintf(name, sizeof(name), "%.25s", e->name);
+        fmt_wrap(e->error, 25, l1, l2);
+        app_show_message(app, title, name, l1, l2, AppViewList);
         return;
     }
     cmdset_view_open(app, e->path, AppViewList);

@@ -2,15 +2,18 @@
 // can be tested. Uses 9600 8-N-1 while open and restores the previous settings on exit.
 //
 // Client controls. Hold OK switches mode. Pan/tilt: arrows move while held, OK = home.
-// Zoom/focus: Up/Down zoom while held, Left/Right focus near/far while held, OK = one-push focus.
-// Presets: Left/Right pick 0-9, OK recalls, Down saves. Power: OK on/off, Up = address set,
-// Down = ask power. Setup: Up/Down pick a row, Left/Right change it.
+// Zoom: Up/Down zoom while held. Focus: Left/Right near/far while held, OK = auto focus,
+// Up = one-push focus. Presets: Left/Right pick 0-9, OK recalls, Down saves. Power: OK on/off,
+// Up = address set, Down = ask power. Setup: Up/Down pick a row, Left/Right change it.
+// The choose screen sets the baud rate (VISCA's default is 9600).
 #include "tool_visca.h"
 #include "core/visca.h"
 #include "core/fmt.h"
 
 typedef enum { ScreenChoose, ScreenClient, ScreenServer } Screen;
-typedef enum { ModePanTilt, ModeZoomFocus, ModePresets, ModePower, ModeSetup, ModeCount } Mode;
+typedef enum { ModePanTilt, ModeZoom, ModeFocus, ModePresets, ModePower, ModeSetup, ModeCount } Mode;
+
+static const uint32_t bauds[] = {9600, 19200, 38400, 115200};
 
 #define SERVER_LINES 4
 
@@ -18,7 +21,7 @@ typedef struct {
     Screen screen;
     uint8_t choice;
     Mode mode;
-    uint8_t address, pan_speed, tilt_speed, zoom_speed, preset, setup_row;
+    uint8_t address, pan_speed, tilt_speed, zoom_speed, preset, setup_row, baud_index;
     bool power_on_next;
     char last_sent[24];
     char last_reply[32];
@@ -31,7 +34,7 @@ typedef struct {
     SerialConfig saved_config;
 } ViscaModel;
 
-static const char* mode_names[ModeCount] = {"Pan/tilt", "Zoom/focus", "Presets", "Power", "Setup"};
+static const char* mode_names[ModeCount] = {"Pan/tilt", "Zoom", "Focus", "Presets", "Power", "Setup"};
 
 static void draw(Canvas* canvas, void* model) {
     ViscaModel* m = model;
@@ -53,7 +56,8 @@ static void draw(Canvas* canvas, void* model) {
             canvas_draw_str(canvas, 3, y, rows[i]);
             canvas_set_color(canvas, ColorBlack);
         }
-        canvas_draw_str(canvas, 2, 52, "Serial: 9600 8-N-1 while open");
+        snprintf(buf, sizeof(buf), "Baud: %lu 8-N-1  <>", (unsigned long)bauds[m->baud_index]);
+        canvas_draw_str(canvas, 2, 52, buf);
         canvas_draw_str(canvas, 2, 63, "OK: start");
         return;
     }
@@ -84,10 +88,15 @@ static void draw(Canvas* canvas, void* model) {
         canvas_draw_str(canvas, 1, 30, "OK: home");
         canvas_draw_str(canvas, 1, 39, buf);
         break;
-    case ModeZoomFocus:
-        canvas_draw_str(canvas, 1, 21, "Up/Down: zoom tele/wide");
-        canvas_draw_str(canvas, 1, 30, "Left/Right: focus near/far");
-        canvas_draw_str(canvas, 1, 39, "OK: one-push focus");
+    case ModeZoom:
+        snprintf(buf, sizeof(buf), "Zoom speed %u (Setup)", m->zoom_speed);
+        canvas_draw_str(canvas, 1, 21, "Up/Down: tele/wide while held");
+        canvas_draw_str(canvas, 1, 30, buf);
+        break;
+    case ModeFocus:
+        canvas_draw_str(canvas, 1, 21, "Left/Right: near/far, held");
+        canvas_draw_str(canvas, 1, 30, "OK: auto focus");
+        canvas_draw_str(canvas, 1, 39, "Up: one-push focus");
         break;
     case ModePresets:
         canvas_set_font(canvas, FontPrimary);
@@ -147,22 +156,25 @@ static void server_add(ViscaModel* m, const char* line, const uint8_t* pkt, uint
 static void tick(App* app, void* context) {
     View* view = context;
     SerialByte in[64];
-    size_t n = serial_port_read(app->port, in, COUNT_OF(in));
+    size_t n, total = 0;
     ViscaModel* m = view_get_model(view);
-    for(size_t i = 0; i < n; i++) {
-        uint8_t pkt[VISCA_MAX_PACKET], len;
-        if(!visca_framer_feed(&m->framer, in[i].byte, pkt, &len)) continue;
-        if(m->screen == ScreenClient) {
-            visca_describe_reply(pkt, len, m->last_reply, sizeof(m->last_reply));
-        } else if(m->screen == ScreenServer) {
-            uint8_t reply[24];
-            char desc[40];
-            size_t r = visca_camera_handle(&m->camera, pkt, len, reply, sizeof(reply), desc, sizeof(desc));
-            if(r) serial_port_write(app->port, reply, r);
-            server_add(m, desc, pkt, len);
+    while(total < SERIAL_DRAIN_MAX && (n = serial_port_read(app->port, in, COUNT_OF(in))) > 0) {
+        total += n;
+        for(size_t i = 0; i < n; i++) {
+            uint8_t pkt[VISCA_MAX_PACKET], len;
+            if(!visca_framer_feed(&m->framer, in[i].byte, pkt, &len)) continue;
+            if(m->screen == ScreenClient) {
+                visca_describe_reply(pkt, len, m->last_reply, sizeof(m->last_reply));
+            } else if(m->screen == ScreenServer) {
+                uint8_t reply[24];
+                char desc[40];
+                size_t r = visca_camera_handle(&m->camera, pkt, len, reply, sizeof(reply), desc, sizeof(desc));
+                if(r) serial_port_write(app->port, reply, r);
+                server_add(m, desc, pkt, len);
+            }
         }
     }
-    view_commit_model(view, n > 0);
+    view_commit_model(view, total > 0);
 }
 
 static void client_input(App* app, ViscaModel* m, InputEvent* e) {
@@ -184,12 +196,14 @@ static void client_input(App* app, ViscaModel* m, InputEvent* e) {
         if(k == InputKeyOk && is_short) send(app, m, ViscaPanTiltHome, 0, 0, "home");
         break;
     }
-    case ModeZoomFocus:
+    case ModeZoom:
         if(k == InputKeyUp || k == InputKeyDown) {
             if(press)
                 send(app, m, k == InputKeyUp ? ViscaZoomTele : ViscaZoomWide, m->zoom_speed, 0, k == InputKeyUp ? "zoom tele" : "zoom wide");
             if(release) send(app, m, ViscaZoomStop, 0, 0, "zoom stop");
         }
+        break;
+    case ModeFocus:
         if(k == InputKeyLeft || k == InputKeyRight) {
             if(press) {
                 send(app, m, ViscaFocusManual, 0, 0, "focus manual");
@@ -197,7 +211,8 @@ static void client_input(App* app, ViscaModel* m, InputEvent* e) {
             }
             if(release) send(app, m, ViscaFocusStop, 0, 0, "focus stop");
         }
-        if(k == InputKeyOk && is_short) send(app, m, ViscaFocusOnePush, 0, 0, "one-push focus");
+        if(k == InputKeyOk && is_short) send(app, m, ViscaFocusAuto, 0, 0, "auto focus");
+        if(k == InputKeyUp && is_short) send(app, m, ViscaFocusOnePush, 0, 0, "one-push focus");
         break;
     case ModePresets:
         if(k == InputKeyLeft && step) m->preset = (uint8_t)((m->preset + 9) % 10);
@@ -252,6 +267,12 @@ static bool input(InputEvent* event, void* context) {
         }
     } else if(m->screen == ScreenChoose) {
         if((event->key == InputKeyUp || event->key == InputKeyDown) && step) m->choice ^= 1;
+        if((event->key == InputKeyLeft || event->key == InputKeyRight) && is_short) {
+            uint8_t count = (uint8_t)COUNT_OF(bauds);
+            m->baud_index = (uint8_t)((m->baud_index + (event->key == InputKeyRight ? 1 : count - 1)) % count);
+            const SerialConfig cfg = {.baud = bauds[m->baud_index], .data_bits = 8, .parity = 'N', .stop_bits = 1};
+            serial_port_configure(app->port, &cfg);
+        }
         if(event->key == InputKeyOk && is_short) {
             m->screen = m->choice == 0 ? ScreenClient : ScreenServer;
             memset(&m->framer, 0, sizeof(m->framer));
@@ -288,8 +309,9 @@ static void enter(void* context) {
         m->power_on_next = true;
     }
     m->last_sent[0] = m->last_reply[0] = 0;
+    uint32_t baud = bauds[m->baud_index];
     view_commit_model(app->visca_view, true);
-    const SerialConfig visca = {.baud = 9600, .data_bits = 8, .parity = 'N', .stop_bits = 1};
+    const SerialConfig visca = {.baud = baud, .data_bits = 8, .parity = 'N', .stop_bits = 1};
     if(app->port) serial_port_configure(app->port, &visca);
     app->tick_context = app->visca_view;
     app->tick = tick;

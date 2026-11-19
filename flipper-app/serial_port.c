@@ -1,13 +1,15 @@
 #include "serial_port.h"
 #include <expansion/expansion.h>
+#include "core/serialbits.h"
 
-#define RX_QUEUE_BYTES 2048
+#define RX_QUEUE_BYTES 1024
 
 struct SerialPort {
     FuriHalSerialHandle* handle;
     Expansion* expansion;
     FuriStreamBuffer* rx;
     volatile uint8_t pending_errors;
+    volatile uint8_t mask; // 0x7F with 7 data bits: the UART leaves the parity bit in bit 7
     volatile SerialErrors errors;
 };
 
@@ -31,7 +33,7 @@ static void rx_callback(FuriHalSerialHandle* handle, FuriHalSerialRxEvent event,
     }
     if(event & FuriHalSerialRxEventData) {
         SerialByte b = {
-            .byte = furi_hal_serial_async_rx(handle),
+            .byte = (uint8_t)(furi_hal_serial_async_rx(handle) & p->mask),
             .errors = p->pending_errors,
             .at_ms = furi_get_tick(),
         };
@@ -41,6 +43,7 @@ static void rx_callback(FuriHalSerialHandle* handle, FuriHalSerialRxEvent event,
 }
 
 static void apply(SerialPort* p, const SerialConfig* cfg) {
+    p->mask = serial_data_mask(cfg);
     furi_hal_serial_set_br(p->handle, cfg->baud);
     furi_hal_serial_configure_framing(
         p->handle,

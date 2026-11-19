@@ -88,7 +88,7 @@ static void test_missing_comma_reports_line(void) {
                        "  \"format\": 1,\n"
                        "  \"id\": \"x\"\n"
                        "  \"name\": \"X\",\n"
-                       "  \"commands\": []\n"
+                       "  \"commands\": [ { \"name\": \"A\", \"hex\": \"01\" } ]\n"
                        "}\n";
     CHECK(!parse(json));
     CHECK(err.line == 4);
@@ -103,18 +103,18 @@ static void test_rejects_both_hex_and_text(void) {
 }
 
 static void test_rejects_wrong_format_version(void) {
-    CHECK(!parse("{ \"format\": 2, \"id\": \"x\", \"name\": \"X\", \"commands\": [] }"));
+    CHECK(!parse("{ \"format\": 2, \"id\": \"x\", \"name\": \"X\", \"commands\": [ { \"name\": \"A\", \"hex\": \"01\" } ] }"));
     CHECK(strstr(err.message, "format") != NULL);
 }
 
 static void test_rejects_missing_format(void) {
-    CHECK(!parse("{ \"id\": \"x\", \"name\": \"X\", \"commands\": [] }"));
+    CHECK(!parse("{ \"id\": \"x\", \"name\": \"X\", \"commands\": [ { \"name\": \"A\", \"hex\": \"01\" } ] }"));
     CHECK(strstr(err.message, "format") != NULL);
 }
 
 static void test_rejects_unknown_parity(void) {
     CHECK(!parse("{ \"format\": 1, \"id\": \"x\", \"name\": \"X\",\n"
-                 "  \"serial\": { \"baud\": 9600, \"parity\": \"mark\" }, \"commands\": [] }"));
+                 "  \"serial\": { \"baud\": 9600, \"parity\": \"mark\" }, \"commands\": [ { \"name\": \"A\", \"hex\": \"01\" } ] }"));
     CHECK(strstr(err.message, "parity") != NULL);
 }
 
@@ -148,9 +148,23 @@ static void test_optional_fields_absent(void) {
     CHECK(!set.commands[0].has_expect);
 }
 
-static void test_unknown_top_level_key_ignored(void) {
-    CHECK(parse("{ \"format\": 1, \"id\": \"x\", \"name\": \"X\", \"notes\": { \"a\": [1, 2] },\n"
+static void test_notes_key_allowed(void) {
+    CHECK(parse("{ \"format\": 1, \"id\": \"x\", \"name\": \"X\", \"notes\": \"anything\",\n"
                 "  \"commands\": [ { \"name\": \"A\", \"hex\": \"01\" } ] }"));
+}
+
+static void test_misspelt_top_level_key_rejected(void) {
+    CHECK(!parse("{ \"format\": 1, \"id\": \"x\", \"name\": \"X\",\n"
+                 "  \"seral\": { \"baud\": 19200 },\n"
+                 "  \"commands\": [ { \"name\": \"A\", \"hex\": \"01\" } ] }"));
+    CHECK(strstr(err.message, "seral") != NULL);
+    CHECK(err.line == 2);
+}
+
+static void test_file_without_commands_rejected(void) {
+    CHECK(!parse("{ \"format\": 1, \"id\": \"x\", \"name\": \"X\", \"comands\": [] }"));
+    CHECK(!parse("{ \"format\": 1, \"id\": \"x\", \"name\": \"X\", \"commands\": [] }"));
+    CHECK(strstr(err.message, "command") != NULL);
 }
 
 static void test_json_escapes_decoded(void) {
@@ -226,7 +240,9 @@ int main(void) {
     RUN(test_rejects_command_without_data);
     RUN(test_too_many_commands);
     RUN(test_optional_fields_absent);
-    RUN(test_unknown_top_level_key_ignored);
+    RUN(test_notes_key_allowed);
+    RUN(test_misspelt_top_level_key_rejected);
+    RUN(test_file_without_commands_rejected);
     RUN(test_json_escapes_decoded);
     RUN(test_data_too_long_errors);
     RUN(test_not_json_errors);

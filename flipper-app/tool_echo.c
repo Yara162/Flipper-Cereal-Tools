@@ -29,14 +29,14 @@ static void draw(Canvas* canvas, void* model) {
     else
         msgring_draw(canvas, &m->ring, 19, ROWS, m->hex, false, 0);
     canvas_draw_line(canvas, 0, 54, 127, 54);
-    if(m->errors.frame || m->errors.parity || m->errors.dropped)
+    if(m->status[0])
+        snprintf(buf, sizeof(buf), "%s", m->status);
+    else if(m->errors.frame || m->errors.parity || m->errors.dropped || m->errors.overrun)
         snprintf(
             buf, sizeof(buf), "Errors: frame %lu parity %lu lost %lu", (unsigned long)m->errors.frame,
-            (unsigned long)m->errors.parity, (unsigned long)m->errors.dropped);
-    else if(m->status[0])
-        snprintf(buf, sizeof(buf), "%s", m->status);
+            (unsigned long)m->errors.parity, (unsigned long)(m->errors.dropped + m->errors.overrun));
     else
-        snprintf(buf, sizeof(buf), "OK echo  hold OK auto  < hex");
+        snprintf(buf, sizeof(buf), "OK echo  hold OK auto  > set");
     canvas_draw_str(canvas, 1, 63, buf);
 }
 
@@ -49,21 +49,26 @@ static void send_back(App* app, EchoModel* m, const Message* msg) {
 static void tick(App* app, void* context) {
     View* view = context;
     SerialByte in[64];
-    size_t n = serial_port_read(app->port, in, COUNT_OF(in));
-    uint32_t now = furi_get_tick();
+    size_t n, total = 0;
     EchoModel* m = view_get_model(view);
     bool changed = false;
     Message msg;
-    for(size_t i = 0; i < n; i++) {
-        m->bytes++;
-        if(msgsplit_feed(&m->splitter, in[i].byte, in[i].at_ms, &msg)) {
-            msgring_add(&m->ring, &msg);
-            m->messages++;
-            if(m->auto_echo) send_back(app, m, &msg);
-            changed = true;
+    // empty the queue (up to a cap, so the screen still redraws during a flood)
+    while(total < SERIAL_DRAIN_MAX && (n = serial_port_read(app->port, in, COUNT_OF(in))) > 0) {
+        total += n;
+        for(size_t i = 0; i < n; i++) {
+            m->bytes++;
+            if(msgsplit_feed(&m->splitter, in[i].byte, in[i].at_ms, &msg)) {
+                msgring_add(&m->ring, &msg);
+                m->messages++;
+                if(m->auto_echo) send_back(app, m, &msg);
+                changed = true;
+            }
         }
     }
-    if(msgsplit_poll(&m->splitter, now, &msg)) {
+    n = total;
+    // only judge a quiet gap once the queue is empty, or a backlog looks like silence
+    if(total < SERIAL_DRAIN_MAX && msgsplit_poll(&m->splitter, furi_get_tick(), &msg)) {
         msgring_add(&m->ring, &msg);
         m->messages++;
         if(m->auto_echo) send_back(app, m, &msg);
@@ -94,6 +99,7 @@ static void save(App* app, EchoModel* m) {
         fmt_hex(msg->data, msg->len, hex, hex_size);
         log_line(f, text);
         log_line(f, hex);
+        if(msg->truncated) log_line(f, "(continues in the next message)");
     }
     free(text);
     free(hex);
@@ -110,6 +116,10 @@ static bool input(InputEvent* event, void* context) {
         app_switch(app, AppViewMenu);
         return true;
     }
+    if(event->key == InputKeyRight && is_short) {
+        app_open_settings(app, AppViewEcho);
+        return true;
+    }
     EchoModel* m = view_get_model(view);
     if(event->key == InputKeyOk && is_short) {
         const Message* last = msgring_newest(&m->ring);
@@ -122,9 +132,10 @@ static bool input(InputEvent* event, void* context) {
         snprintf(m->status, sizeof(m->status), m->auto_echo ? "Auto-echo on" : "Auto-echo off");
     } else if(event->key == InputKeyLeft && is_short) {
         m->hex = !m->hex;
-    } else if(event->key == InputKeyRight && is_short) {
+    } else if(event->key == InputKeyRight && event->type == InputTypeLong) {
         save(app, m);
     } else if(event->key == InputKeyUp && step) {
+        m->status[0] = 0;
         msgring_scroll(&m->ring, 1, ROWS);
     } else if(event->key == InputKeyDown && step) {
         msgring_scroll(&m->ring, -1, ROWS);
@@ -136,10 +147,11 @@ static bool input(InputEvent* event, void* context) {
 static void enter(void* context) {
     App* app = context;
     EchoModel* m = view_get_model(app->echo_view);
-    memset(m, 0, sizeof(*m));
+    // returning from the settings screen keeps the list; a fresh visit starts over
+    if(app->settings_back != AppViewEcho) memset(m, 0, sizeof(*m));
+    app->settings_back = AppViewMenu;
     msgsplit_init(&m->splitter, msgsplit_gap_for_baud(app->config.baud));
     view_commit_model(app->echo_view, true);
-    serial_port_flush(app->port);
     serial_port_errors(app->port, &(SerialErrors){0}, true);
     app->tick_context = app->echo_view;
     app->tick = tick;

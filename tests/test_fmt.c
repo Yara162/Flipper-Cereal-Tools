@@ -1,5 +1,6 @@
 #include "check.h"
 #include "fmt.h"
+#include "msgsplit.h"
 
 static void test_fmt_text_escapes(void) {
     const uint8_t in[] = {0x00, 0x41, 0x0D, 0x0A, 0xFF, 0x5C, 0x09};
@@ -31,7 +32,35 @@ static void test_fmt_hex(void) {
     CHECK(fmt_hex(in, 0, out, sizeof(out)) == 0 && out[0] == 0);
 }
 
+static void test_message_marks_continuation(void) {
+    Message m;
+    memset(&m, 0, sizeof(m));
+    memcpy(m.data, "abc", 3);
+    m.len = 3;
+    char out[32];
+    fmt_message(&m, false, out, sizeof(out));
+    CHECK(strcmp(out, "abc") == 0);
+    m.truncated = true;
+    fmt_message(&m, false, out, sizeof(out));
+    CHECK(strcmp(out, "abc+") == 0);
+    fmt_message(&m, true, out, sizeof(out));
+    CHECK(strcmp(out, "61 62 63 +") == 0);
+}
+
+static void test_wrap_two_lines(void) {
+    char a[26], b[26];
+    fmt_wrap("Unknown command field: expect_txt", 25, a, b);
+    CHECK(strcmp(a, "Unknown command field:") == 0);
+    CHECK(strcmp(b, "expect_txt") == 0);
+    fmt_wrap("Short", 25, a, b);
+    CHECK(strcmp(a, "Short") == 0 && b[0] == 0);
+    fmt_wrap("Averyveryverylongwordwithoutspaces_and_more", 25, a, b);
+    CHECK(strlen(a) == 25 && strcmp(b, "outspaces_and_more") == 0);
+}
+
 int main(void) {
+    RUN(test_message_marks_continuation);
+    RUN(test_wrap_two_lines);
     RUN(test_fmt_text_escapes);
     RUN(test_fmt_small_buffer);
     RUN(test_fmt_hex);

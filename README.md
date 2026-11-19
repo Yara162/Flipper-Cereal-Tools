@@ -64,24 +64,32 @@ same command screen:
 - settings rows at the top (display ID, volume level): Left/Right change them
 - commands grouped as Power, Input, Volume, Mute: OK sends
 - the result shows the bytes sent, the reply as text or hex (Left toggles), OK or
-  UNEXPECTED when the file says what reply to expect, and any values read from the reply
+  UNEXPECTED when the file says what reply to expect, and any values read from the reply;
+  the app keeps listening until the line has been quiet for 150 ms (up to 1 second)
 - OK on the result sends again; hold Right on the list saves the session to a log
 
 A `*` after a name means that command set has not yet been confirmed on real hardware.
 `(mine)` marks your own files.
 
 **Echo**: OK sends the latest message back byte for byte, hold OK turns on auto-echo (every
-message sent back as it arrives), Left toggles hex, Right saves a log, Up/Down scroll.
+message sent back as it arrives), Left toggles hex, Right opens serial settings without
+losing the list, hold Right saves a log, Up/Down scroll.
+
+In Echo and the Sniffer, a message longer than 256 bytes is split; a `+` at the end of a line
+(and "continues" in the log) means the next line carries on the same message.
 
 **Sniffer**: never sends anything. Each message shows the time since start. OK starts and
 stops logging, Left toggles hex, Right opens serial settings without losing the capture.
 Framing and parity error counts on the bottom line hint at wrong serial settings.
 
-**VISCA camera** uses 9600 8-N-1 while open and restores your settings afterwards.
+**VISCA camera** uses 8-N-1 at 9600 baud by default; Left/Right on the first screen picks
+19200, 38400 or 115200 instead. Your own settings come back when you leave.
 
 - Client: hold OK to switch mode.
   - Pan/tilt: arrows move while held, OK homes.
-  - Zoom/focus: Up/Down zoom while held, Left/Right focus near/far while held, OK one-push focus.
+  - Zoom: Up/Down zoom tele/wide while held.
+  - Focus: Left/Right focus near/far while held (switches the camera to manual focus), OK
+    returns to auto focus, Up does a one-push focus.
   - Presets: Left/Right pick 0-9, OK recalls, Down saves.
   - Power: OK on/off, Up sends address set, Down asks the power state.
   - Setup: camera address and speeds.
@@ -90,8 +98,9 @@ Framing and parity error counts on the bottom line hint at wrong serial settings
   Unknown commands show as hex and get a syntax-error reply. Left toggles hex, OK clears.
 
 **Baud-rate finder** listens for 1.5 seconds at each of 16 settings (all eight speeds at
-8-N-1, then 7-E-1 and 8-E-1 at common speeds) and shows the three best with a score. OK
-applies the best. The device must be talking; if it only answers when asked, turn on
+8-N-1, then 7-E-1 and 8-E-1 at common speeds) and shows the three best with a score out of
+100: mostly how few framing and parity errors arrived, partly how much of it is readable
+text. OK applies the best. The device must be talking; if it only answers when asked, turn on
 "Send a probe" for that run and the finder sends a carriage return at each setting.
 
 ## Files on the SD card
@@ -143,7 +152,9 @@ built-in one, and app updates never touch your folder.
 | `expect` / `expect_text` | Optional reply to look for, as hex or text; shown as OK or UNEXPECTED |
 | `show` | Optional values to read out of the reply (below) |
 
-Any field the app does not know is ignored, so you can add `notes`.
+A field the app does not know is an error, so a misspelt name never goes unnoticed. Use
+`notes` for your own comments; it is the one extra field allowed. A file needs at least one
+command.
 
 **Text** may use `\r`, `\n`, `\t`, `\\` and `\xNN` for a byte by its hex value; in a JSON
 file each backslash is written twice (`"\\x02"`), except `\r` `\n` `\t`, which JSON already
@@ -166,8 +177,8 @@ and `until` the text that ends it. For binary replies, `byte` is the position (f
 `length` 1 to 4 bytes, big-endian unless `"order": "little"`. An optional `map` turns raw
 values into words, for example `{ "00": "Standby", "01": "On" }`.
 
-If a file has a mistake, the app lists it with `!` and shows the line number and reason
-when you open it.
+If a file has a mistake, the app lists it with `!` and shows the file name, line number and
+reason when you open it.
 
 ## Command sets included
 
