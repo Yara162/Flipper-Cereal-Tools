@@ -1,0 +1,32 @@
+{
+  "format": 1,
+  "id": "epson_escvp21",
+  "name": "Epson ESC/VP21",
+  "category": "projector",
+  "segment": "",
+  "source": "Epson ESC/VP21 Command User's Guide for Business Projectors",
+  "tested": false,
+  "notes": "Epson projectors. Every command answers ':' when done, or 'ERR' then ':' if refused. Select RS-232C in the projector's Advanced menu. Error codes not in the map below show as their number; see Epson's guide.",
+  "serial": { "baud": 9600, "data_bits": 8, "parity": "none", "stop_bits": 1 },
+  "commands": [
+    { "name": "Power on", "group": "Power", "text": "PWR ON\r", "expect_text": ":" },
+    { "name": "Power off", "group": "Power", "text": "PWR OFF\r", "expect_text": ":" },
+    { "name": "Power status", "group": "Status", "text": "PWR?\r", "expect_text": "PWR=",
+      "show": [ { "label": "Power code", "after": "PWR=", "until": "\r" } ] },
+    { "name": "HDMI 1", "group": "Input", "text": "SOURCE 30\r", "expect_text": ":" },
+    { "name": "HDMI 2", "group": "Input", "text": "SOURCE A0\r", "expect_text": ":" },
+    { "name": "Computer 1", "group": "Input", "text": "SOURCE 10\r", "expect_text": ":" },
+    { "name": "Computer 2", "group": "Input", "text": "SOURCE 20\r", "expect_text": ":" },
+    { "name": "Video", "group": "Input", "text": "SOURCE 41\r", "expect_text": ":" },
+    { "name": "Input status", "group": "Status", "text": "SOURCE?\r", "expect_text": "SOURCE=",
+      "show": [ { "label": "Input", "after": "SOURCE=", "until": "\r",
+                  "map": { "30": "HDMI 1", "A0": "HDMI 2", "10": "Computer 1", "20": "Computer 2", "41": "Video" } } ] },
+    { "name": "Picture mute on", "group": "Picture mute", "text": "MUTE ON\r", "expect_text": ":" },
+    { "name": "Picture mute off", "group": "Picture mute", "text": "MUTE OFF\r", "expect_text": ":" },
+    { "name": "Lamp hours", "group": "Status", "text": "LAMP?\r", "expect_text": "LAMP=",
+      "show": [ { "label": "Lamp hours", "after": "LAMP=", "until": "\r" } ] },
+    { "name": "Error status", "group": "Status", "text": "ERR?\r", "expect_text": "ERR=",
+      "show": [ { "label": "Error", "after": "ERR=", "until": "\r",
+                  "map": { "00": "None", "01": "Fan error", "03": "Lamp did not light", "04": "Too hot", "06": "Lamp error", "0E": "Power supply" } } ] }
+  ]
+}

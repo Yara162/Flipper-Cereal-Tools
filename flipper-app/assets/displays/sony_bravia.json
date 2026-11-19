@@ -1,0 +1,30 @@
+{
+  "format": 1,
+  "id": "sony_bravia",
+  "name": "Sony Bravia",
+  "category": "display",
+  "segment": "both",
+  "source": "Sony BRAVIA Professional serial control command list",
+  "tested": false,
+  "notes": "Bravia professional displays and consumer Bravias with an RS-232C port (often a 3.5 mm jack). Turn on RS232C control in the TV's settings. Send 'Allow power on by serial' once, or Power on is ignored while the TV is in standby.",
+  "serial": { "baud": 9600, "data_bits": 8, "parity": "none", "stop_bits": 1 },
+  "commands": [
+    { "name": "Allow power on by serial", "group": "Power", "hex": "8C 00 01 02 01 {sum}", "expect": "70 00" },
+    { "name": "Power on", "group": "Power", "hex": "8C 00 00 02 01 {sum}", "expect": "70 00" },
+    { "name": "Power off", "group": "Power", "hex": "8C 00 00 02 00 {sum}", "expect": "70 00" },
+    { "name": "Power status", "group": "Power", "hex": "83 00 00 FF FF {sum}", "expect": "70 00",
+      "show": [ { "label": "Power", "byte": 3, "length": 1, "map": { "00": "Standby", "01": "On" } } ] },
+    { "name": "HDMI 1", "group": "Input", "hex": "8C 00 02 03 04 01 {sum}", "expect": "70 00" },
+    { "name": "HDMI 2", "group": "Input", "hex": "8C 00 02 03 04 02 {sum}", "expect": "70 00" },
+    { "name": "HDMI 3", "group": "Input", "hex": "8C 00 02 03 04 03 {sum}", "expect": "70 00" },
+    { "name": "HDMI 4", "group": "Input", "hex": "8C 00 02 03 04 04 {sum}", "expect": "70 00" },
+    { "name": "Next input", "group": "Input", "hex": "8C 00 02 02 00 {sum}", "expect": "70 00" },
+    { "name": "Volume up", "group": "Volume", "hex": "8C 00 05 03 00 00 {sum}", "expect": "70 00" },
+    { "name": "Volume down", "group": "Volume", "hex": "8C 00 05 03 00 01 {sum}", "expect": "70 00" },
+    { "name": "Volume status", "group": "Volume", "hex": "83 00 05 FF FF {sum}", "expect": "70 00",
+      "show": [ { "label": "Volume", "byte": 3, "length": 1 } ] },
+    { "name": "Mute on", "group": "Mute", "hex": "8C 00 06 03 01 01 {sum}", "expect": "70 00" },
+    { "name": "Mute off", "group": "Mute", "hex": "8C 00 06 03 01 00 {sum}", "expect": "70 00" },
+    { "name": "Mute toggle", "group": "Mute", "hex": "8C 00 06 02 00 {sum}", "expect": "70 00" }
+  ]
+}

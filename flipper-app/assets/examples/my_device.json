@@ -1,0 +1,17 @@
+{
+  "format": 1,
+  "id": "my_device",
+  "name": "My device (example)",
+  "category": "custom",
+  "notes": "Example command file. Copy it, rename it, and edit it on your computer. Each command has a name and either text (with \\r \\n \\xNN escapes) or hex. expect / expect_text are optional replies to check for. {id} is filled from the settings list below. Any field the app does not know, like this one, is ignored.",
+  "serial": { "baud": 9600, "data_bits": 8, "parity": "none", "stop_bits": 1 },
+  "settings": [
+    { "key": "id", "label": "Device ID", "min": 1, "max": 99, "default": 1 }
+  ],
+  "commands": [
+    { "name": "Say hello", "group": "Text", "text": "HELLO\r" },
+    { "name": "Ask status", "group": "Text", "text": "STATUS?\r", "expect_text": "OK" },
+    { "name": "Power on", "group": "Hex", "hex": "AA 11 {id} 01 01 {sum1}" },
+    { "name": "Power off", "group": "Hex", "hex": "AA 11 {id} 01 00 {sum1}" }
+  ]
+}

@@ -1,0 +1,5 @@
+.superpowers/
+flipper-app/dist/
+flipper-app/.vscode/
+flipper-app/.ufbt/
+tests/build/

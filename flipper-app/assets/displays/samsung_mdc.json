@@ -1,0 +1,33 @@
+{
+  "format": 1,
+  "id": "samsung_mdc",
+  "name": "Samsung MDC",
+  "category": "display",
+  "segment": "commercial",
+  "source": "Samsung MDC RS232 protocol v2.1; Elipse MDC driver guide",
+  "tested": false,
+  "notes": "Samsung signage and commercial displays (QB, QM, QH and similar). Set the display's ID in its menu and match it here; the protocol has no volume up/down step, so set an absolute level instead. HDMI 3 and 4 codes could not be sourced and are left out.",
+  "serial": { "baud": 9600, "data_bits": 8, "parity": "none", "stop_bits": 1 },
+  "settings": [
+    { "key": "id", "label": "Display ID", "min": 1, "max": 254, "default": 1 },
+    { "key": "volume", "label": "Volume", "min": 0, "max": 100, "default": 20 }
+  ],
+  "commands": [
+    { "name": "Power on", "group": "Power", "hex": "AA 11 {id} 01 01 {sum1}", "expect": "AA FF {id} 03 41 11" },
+    { "name": "Power off", "group": "Power", "hex": "AA 11 {id} 01 00 {sum1}", "expect": "AA FF {id} 03 41 11" },
+    { "name": "Power status", "group": "Power", "hex": "AA 11 {id} 00 {sum1}", "expect": "AA FF {id} 03 41 11",
+      "show": [ { "label": "Power", "byte": 6, "length": 1, "map": { "00": "Off", "01": "On" } } ] },
+    { "name": "HDMI 1", "group": "Input", "hex": "AA 14 {id} 01 21 {sum1}", "expect": "AA FF {id} 03 41 14" },
+    { "name": "HDMI 2", "group": "Input", "hex": "AA 14 {id} 01 23 {sum1}", "expect": "AA FF {id} 03 41 14" },
+    { "name": "DisplayPort", "group": "Input", "hex": "AA 14 {id} 01 25 {sum1}", "expect": "AA FF {id} 03 41 14" },
+    { "name": "PC (VGA)", "group": "Input", "hex": "AA 14 {id} 01 14 {sum1}", "expect": "AA FF {id} 03 41 14" },
+    { "name": "Input status", "group": "Input", "hex": "AA 14 {id} 00 {sum1}", "expect": "AA FF {id} 03 41 14",
+      "show": [ { "label": "Input", "byte": 6, "length": 1,
+                  "map": { "21": "HDMI 1", "22": "HDMI 1 (PC)", "23": "HDMI 2", "24": "HDMI 2 (PC)", "25": "DisplayPort", "14": "PC" } } ] },
+    { "name": "Set volume", "group": "Volume", "hex": "AA 12 {id} 01 {volume} {sum1}", "expect": "AA FF {id} 03 41 12" },
+    { "name": "Volume status", "group": "Volume", "hex": "AA 12 {id} 00 {sum1}", "expect": "AA FF {id} 03 41 12",
+      "show": [ { "label": "Volume", "byte": 6, "length": 1 } ] },
+    { "name": "Mute on", "group": "Mute", "hex": "AA 13 {id} 01 01 {sum1}", "expect": "AA FF {id} 03 41 13" },
+    { "name": "Mute off", "group": "Mute", "hex": "AA 13 {id} 01 00 {sum1}", "expect": "AA FF {id} 03 41 13" }
+  ]
+}
