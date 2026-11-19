@@ -177,7 +177,44 @@ static void test_not_json_errors(void) {
     CHECK(!parse("[1, 2, 3]"));
 }
 
+static CatalogEntry entry(const char* id, const char* name, bool user, bool broken) {
+    CatalogEntry e;
+    memset(&e, 0, sizeof(e));
+    strcpy(e.id, id);
+    strcpy(e.name, name);
+    e.user = user;
+    e.broken = broken;
+    return e;
+}
+
+static void test_catalog_merge_user_wins(void) {
+    CatalogEntry builtin[] = {entry("samsung_mdc", "Samsung MDC", false, false), entry("lg_ascii", "LG", false, false)};
+    CatalogEntry user[] = {entry("samsung_mdc", "Samsung MDC (mine)", true, false)};
+    CatalogEntry out[8];
+    size_t n = catalog_merge(builtin, 2, user, 1, out, 8);
+    CHECK(n == 2);
+    CHECK(strcmp(out[0].id, "lg_ascii") == 0); // sorted by name
+    CHECK(strcmp(out[1].id, "samsung_mdc") == 0 && out[1].user);
+}
+
+static void test_catalog_merge_keeps_broken(void) {
+    CatalogEntry user[] = {entry("", "bad_file.json", true, true), entry("mine", "Mine", true, false)};
+    CatalogEntry out[8];
+    size_t n = catalog_merge(NULL, 0, user, 2, out, 8);
+    CHECK(n == 2);
+    CHECK(out[0].broken);
+}
+
+static void test_catalog_merge_respects_max(void) {
+    CatalogEntry builtin[] = {entry("a", "A", false, false), entry("b", "B", false, false), entry("c", "C", false, false)};
+    CatalogEntry out[2];
+    CHECK(catalog_merge(builtin, 3, NULL, 0, out, 2) == 2);
+}
+
 int main(void) {
+    RUN(test_catalog_merge_user_wins);
+    RUN(test_catalog_merge_keeps_broken);
+    RUN(test_catalog_merge_respects_max);
     RUN(test_parses_full_file);
     RUN(test_text_command_and_show_rules);
     RUN(test_missing_comma_reports_line);

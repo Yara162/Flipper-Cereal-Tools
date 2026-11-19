@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 
 #define JSMN_STATIC
 #define JSMN_STRICT
@@ -388,4 +389,32 @@ bool cmdfile_parse(const char* json, size_t len, CommandSet* out, CmdFileError* 
 
     free(c.tok);
     return ok;
+}
+
+size_t catalog_merge(
+    const CatalogEntry* builtin,
+    size_t nb,
+    const CatalogEntry* user,
+    size_t nu,
+    CatalogEntry* out,
+    size_t max) {
+    size_t n = 0;
+    for(size_t i = 0; i < nu && n < max; i++) out[n++] = user[i];
+    for(size_t i = 0; i < nb && n < max; i++) {
+        bool replaced = false;
+        for(size_t j = 0; j < nu; j++)
+            if(!user[j].broken && strcmp(user[j].id, builtin[i].id) == 0) replaced = true;
+        if(!replaced) out[n++] = builtin[i];
+    }
+    // insertion sort by name, case-insensitive; lists are short
+    for(size_t i = 1; i < n; i++) {
+        CatalogEntry e = out[i];
+        size_t j = i;
+        while(j > 0 && strcasecmp(out[j - 1].name, e.name) > 0) {
+            out[j] = out[j - 1];
+            j--;
+        }
+        out[j] = e;
+    }
+    return n;
 }

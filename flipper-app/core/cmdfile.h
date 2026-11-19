@@ -76,3 +76,27 @@ typedef struct {
 
 // Parses one command file. On failure returns false and fills `err` with the line and reason.
 bool cmdfile_parse(const char* json, size_t len, CommandSet* out, CmdFileError* err);
+
+// One command file as listed in the app
+typedef struct {
+    char path[96];
+    char id[32];
+    char name[32];
+    char segment[12];
+    char category[12];
+    bool tested;
+    bool user; // from the owner's commands folder
+    bool broken; // failed to load; error_line and error say why
+    int error_line;
+    char error[48];
+} CatalogEntry;
+
+// Combines built-in and owner entries: an owner entry replaces a built-in one with the same
+// id; broken files stay listed so their error can be shown. Output sorted by name.
+size_t catalog_merge(
+    const CatalogEntry* builtin,
+    size_t nb,
+    const CatalogEntry* user,
+    size_t nu,
+    CatalogEntry* out,
+    size_t max);
