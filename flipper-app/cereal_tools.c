@@ -2,6 +2,7 @@
 #include "app.h"
 #include "settings.h"
 #include "tool_echo.h"
+#include "tool_sniffer.h"
 
 typedef enum {
     MenuDisplay,
@@ -80,6 +81,10 @@ static void menu_callback(void* context, uint32_t index) {
     case MenuEcho:
         app_switch(app, AppViewEcho);
         break;
+    case MenuSniffer:
+        app->settings_back = AppViewMenu;
+        app_switch(app, AppViewSniffer);
+        break;
     default:
         app_show_message(app, "Not built yet", "This tool arrives in a", "later step of the build.", "", AppViewMenu);
         break;
@@ -143,6 +148,9 @@ int32_t cereal_tools_app(void* p) {
     app->echo_view = echo_view_alloc(app);
     view_dispatcher_add_view(app->dispatcher, AppViewEcho, app->echo_view);
 
+    app->sniffer_view = sniffer_view_alloc(app);
+    view_dispatcher_add_view(app->dispatcher, AppViewSniffer, app->sniffer_view);
+
     view_dispatcher_attach_to_gui(app->dispatcher, app->gui, ViewDispatcherTypeFullscreen);
     if(app->port)
         app_switch(app, AppViewMenu);
@@ -158,6 +166,8 @@ int32_t cereal_tools_app(void* p) {
     view_dispatcher_remove_view(app->dispatcher, AppViewMessage);
     view_dispatcher_remove_view(app->dispatcher, AppViewEcho);
     echo_view_free(app->echo_view);
+    view_dispatcher_remove_view(app->dispatcher, AppViewSniffer);
+    sniffer_view_free(app->sniffer_view);
     submenu_free(app->menu);
     submenu_free(app->list);
     settings_view_free(app->settings_view);
