@@ -1,0 +1,32 @@
+{
+  "format": 1,
+  "id": "benq",
+  "name": "BenQ",
+  "category": "projector",
+  "segment": "",
+  "source": "BenQ TK850 RS232 Control Guide 1.01",
+  "tested": false,
+  "notes": "BenQ projectors. Supported commands vary by model; an unsupported one answers 'Unsupported item', one that cannot run right now answers 'Block item'.",
+  "serial": { "baud": 9600, "data_bits": 8, "parity": "none", "stop_bits": 1 },
+  "commands": [
+    { "name": "Power on", "group": "Power", "text": "\r*pow=on#\r" },
+    { "name": "Power off", "group": "Power", "text": "\r*pow=off#\r" },
+    { "name": "Power status", "group": "Status", "text": "\r*pow=?#\r",
+      "show": [ { "label": "Power", "after": "POW=", "until": "#" } ] },
+    { "name": "HDMI 1", "group": "Input", "text": "\r*sour=hdmi#\r" },
+    { "name": "HDMI 2", "group": "Input", "text": "\r*sour=hdmi2#\r" },
+    { "name": "Computer", "group": "Input", "text": "\r*sour=RGB#\r" },
+    { "name": "Input status", "group": "Status", "text": "\r*sour=?#\r",
+      "show": [ { "label": "Input", "after": "SOUR=", "until": "#" } ] },
+    { "name": "Picture mute on", "group": "Picture mute", "text": "\r*blank=on#\r" },
+    { "name": "Picture mute off", "group": "Picture mute", "text": "\r*blank=off#\r" },
+    { "name": "Audio mute on", "group": "Audio", "text": "\r*mute=on#\r" },
+    { "name": "Audio mute off", "group": "Audio", "text": "\r*mute=off#\r" },
+    { "name": "Volume up", "group": "Audio", "text": "\r*vol=+#\r" },
+    { "name": "Volume down", "group": "Audio", "text": "\r*vol=-#\r" },
+    { "name": "Lamp hours", "group": "Status", "text": "\r*ltim=?#\r",
+      "show": [ { "label": "Lamp hours", "after": "LTIM=", "until": "#" } ] },
+    { "name": "Model name", "group": "Status", "text": "\r*modelname=?#\r",
+      "show": [ { "label": "Model", "after": "MODELNAME=", "until": "#" } ] }
+  ]
+}

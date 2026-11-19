@@ -1,0 +1,28 @@
+{
+  "format": 1,
+  "id": "lg_ascii",
+  "name": "LG",
+  "category": "display",
+  "segment": "both",
+  "source": "LG RS-232C external control guide (LG help library)",
+  "tested": false,
+  "notes": "LG TVs and commercial displays using the two-letter ASCII protocol. Set ID is in the TV's menu (Option or General > Set ID). Some models use 'kb' instead of 'xb' for inputs.",
+  "serial": { "baud": 9600, "data_bits": 8, "parity": "none", "stop_bits": 1 },
+  "settings": [
+    { "key": "id", "label": "Set ID", "min": 1, "max": 99, "default": 1 }
+  ],
+  "commands": [
+    { "name": "Power on", "group": "Power", "text": "ka {id:2x} 01\r", "expect_text": "a {id:2x} OK01x" },
+    { "name": "Power off", "group": "Power", "text": "ka {id:2x} 00\r", "expect_text": "a {id:2x} OK00x" },
+    { "name": "Power status", "group": "Power", "text": "ka {id:2x} FF\r", "expect_text": "OK",
+      "show": [ { "label": "Power", "after": "OK", "until": "x", "map": { "00": "Off", "01": "On" } } ] },
+    { "name": "HDMI 1", "group": "Input", "text": "xb {id:2x} 90\r", "expect_text": "b {id:2x} OK90x" },
+    { "name": "HDMI 2", "group": "Input", "text": "xb {id:2x} 91\r", "expect_text": "b {id:2x} OK91x" },
+    { "name": "HDMI 3", "group": "Input", "text": "xb {id:2x} 92\r", "expect_text": "b {id:2x} OK92x" },
+    { "name": "HDMI 4", "group": "Input", "text": "xb {id:2x} 93\r", "expect_text": "b {id:2x} OK93x" },
+    { "name": "Volume up", "group": "Volume", "text": "mc {id:2x} 02\r", "expect_text": "c {id:2x} OK02x" },
+    { "name": "Volume down", "group": "Volume", "text": "mc {id:2x} 03\r", "expect_text": "c {id:2x} OK03x" },
+    { "name": "Mute on", "group": "Mute", "text": "ke {id:2x} 00\r", "expect_text": "e {id:2x} OK00x" },
+    { "name": "Mute off", "group": "Mute", "text": "ke {id:2x} 01\r", "expect_text": "e {id:2x} OK01x" }
+  ]
+}
