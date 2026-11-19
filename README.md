@@ -14,7 +14,7 @@ impersonate a VISCA camera.
 | Echo | Shows what arrives; OK sends the latest message back exactly as received |
 | Sniffer | Listens only, timestamps every message, logs to the SD card |
 | VISCA camera | Client: drive a camera. Server: act as a camera and decode what a controller sends |
-| Baud-rate finder | Works out the speed and framing of a device that is talking |
+| Baud-rate finder | Works out a device's speed and framing, with probes and a cable check |
 
 ## Install
 
@@ -100,8 +100,28 @@ Framing and parity error counts on the bottom line hint at wrong serial settings
 **Baud-rate finder** listens for 1.5 seconds at each of 16 settings (all eight speeds at
 8-N-1, then 7-E-1 and 8-E-1 at common speeds) and shows the three best with a score out of
 100: mostly how few framing and parity errors arrived, partly how much of it is readable
-text. OK applies the best. The device must be talking; if it only answers when asked, turn on
-"Send a probe" for that run and the finder sends a carriage return at each setting.
+text. OK applies the best.
+
+The device must be talking. Most displays and projectors only answer when asked, so pick a
+**Probe** (Left/Right on the first row) and the finder sends it at the start of each setting:
+
+| Probe | Sends |
+|---|---|
+| Off (default each time) | nothing |
+| Carriage return | `\r` |
+| BenQ status | `\r*pow=?#\r` |
+| Epson status | `PWR?\r` |
+| LG status | `ka 01 FF\r` |
+| Samsung MDC status | `AA 11 01 00 12` |
+| Sony status | `83 00 00 FF FF 81` |
+| VISCA power | `81 09 04 00 FF` |
+
+**Check cable** proves the wiring before you blame the device. Join TX and RX at the far end
+of the cable (DB9 pins 2 and 3), then choose Check cable: it sends
+`CEREAL CABLE CHECK 0123456789` at 9600 8-N-1 and reports PASS (everything came back),
+PARTLY (some came back: loose contact or noise), GARBLED (something came back but not the
+pattern), or NOTHING CAME BACK (jumper, ground, or TX/RX pins). Your saved settings are put
+back afterwards.
 
 ## Files on the SD card
 

@@ -14,3 +14,23 @@ uint8_t baud_score(const BaudSample* s);
 // 19200, 38400 and 115200.
 extern const SerialConfig baud_candidates[];
 extern const size_t baud_candidate_count;
+
+// Something to send at each setting so a device that only answers when asked has something
+// to answer. Index 0 is "Off".
+typedef struct {
+    const char* name;
+    const uint8_t* data;
+    uint8_t len;
+} BaudProbe;
+
+extern const BaudProbe baud_probes[];
+extern const size_t baud_probe_count;
+
+// Cable check: the test pattern is sent with the far end's TX and RX joined.
+typedef enum { LoopbackNothing, LoopbackPass, LoopbackPartial, LoopbackGarbled } LoopbackVerdict;
+
+extern const uint8_t loopback_pattern[];
+extern const size_t loopback_pattern_len;
+
+// `matched` gets how many pattern bytes came back in order.
+LoopbackVerdict loopback_judge(const uint8_t* got, size_t got_len, size_t* matched);
