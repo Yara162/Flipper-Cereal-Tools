@@ -1,7 +1,7 @@
 # Cereal Tools: design
 
 Date: 2026-11-19
-Status: waiting for approval
+Status: approved 2026-11-19
 
 ## Intent
 
@@ -75,11 +75,11 @@ Supporting goals:
   if it is the LPUART on pins 15 and 16 instead, only the serial port number changes.
 - **Connector.** The HAT has an RJ45 console-style jack. The owner has RJ45-to-DB9
   adapters and null-modem adapters, so cabling is solved on their side; the README should
-  still explain when a null-modem is needed. Rabbit-Labs does not publish the jack's
-  pinout or whether it is wired as the computer end or the device end; the builder looks
-  for it, and otherwise the README gives a symptom-based rule ("nothing arrives at all:
-  add or remove the null-modem") and the first hardware test confirms it with Echo and a
-  loopback.
+  still explain when a null-modem is needed. The owner handles cabling and does not need
+  wiring guidance, but wants the jack's pinout (which RJ45 pins are TX, RX and ground) in
+  the README. Rabbit-Labs does not publish it; the builder looks for it, and if it cannot
+  be sourced, gives the owner a quick way to measure it and adds it to the README once
+  measured. It is never guessed.
 - **Serial port sharing.** The app must disable Flipper's expansion-module service while
   it runs and restore it on exit, as the owner's other serial apps do.
 - **Framing.** The Flipper's USART supports 7, 8 (and 9) data bits, none, even or odd
@@ -310,11 +310,9 @@ Rules:
   with a first batch of command sets led by the owner's hardware on hand:
   - **Samsung MDC**, for the Samsung QB series displays at the owner's work (binary
     protocol with a checksum).
-  - **Sony Bravia**, for the owner's Sony Bravia at home. The model is not yet known;
-    many recent consumer Bravias have no serial port, and those that do often use a
-    3.5 mm jack marked RS-232C that needs its own cable. The builder researches Sony's
-    serial protocol for Bravia models that have one, and the README tells the owner how
-    to check their set.
+  - **Sony Bravia**, for the owner's Sony Bravia A1E at home, which has a serial port the
+    owner already uses for testing. The builder researches Sony's serial protocol for
+    Bravia models of that generation.
   - **BenQ projector** protocol, for the owner's BenQ projector (ASCII, with status
     queries).
   - **VISCA**, tested on the owner's Marshall cameras. The owner's rule: if it works on a
