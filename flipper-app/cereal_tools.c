@@ -1,6 +1,7 @@
 // Cereal Tools: RS-232 tools for AV commissioning with the Rabbit-Labs Flip'n Cereal HAT.
 #include "app.h"
 #include "settings.h"
+#include "tool_echo.h"
 
 typedef enum {
     MenuDisplay,
@@ -76,6 +77,9 @@ static void menu_callback(void* context, uint32_t index) {
     case MenuSettings:
         app_open_settings(app, AppViewMenu);
         break;
+    case MenuEcho:
+        app_switch(app, AppViewEcho);
+        break;
     default:
         app_show_message(app, "Not built yet", "This tool arrives in a", "later step of the build.", "", AppViewMenu);
         break;
@@ -136,6 +140,9 @@ int32_t cereal_tools_app(void* p) {
     view_set_input_callback(app->message_view, message_input);
     view_dispatcher_add_view(app->dispatcher, AppViewMessage, app->message_view);
 
+    app->echo_view = echo_view_alloc(app);
+    view_dispatcher_add_view(app->dispatcher, AppViewEcho, app->echo_view);
+
     view_dispatcher_attach_to_gui(app->dispatcher, app->gui, ViewDispatcherTypeFullscreen);
     if(app->port)
         app_switch(app, AppViewMenu);
@@ -149,6 +156,8 @@ int32_t cereal_tools_app(void* p) {
     view_dispatcher_remove_view(app->dispatcher, AppViewList);
     view_dispatcher_remove_view(app->dispatcher, AppViewSettings);
     view_dispatcher_remove_view(app->dispatcher, AppViewMessage);
+    view_dispatcher_remove_view(app->dispatcher, AppViewEcho);
+    echo_view_free(app->echo_view);
     submenu_free(app->menu);
     submenu_free(app->list);
     settings_view_free(app->settings_view);
