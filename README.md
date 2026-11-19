@@ -203,7 +203,7 @@ More brands follow in later releases.
 | Sniffer | Not yet run on hardware |
 | Custom commands | Not yet run on hardware |
 | Display control | Not yet run on hardware |
-| Projector control | Not yet run on hardware |
+| Projector control | Crashes with "Out of memory" on hardware (see Known issues) |
 | VISCA client and server | Not yet run on hardware |
 | Baud-rate finder | Not yet run on hardware |
 | Samsung MDC set | Not yet run on hardware |
@@ -214,6 +214,12 @@ More brands follow in later releases.
 
 The protocol code (JSON reader, command building and checksums, message splitting, VISCA,
 baud scoring, and every built-in command file) is tested on a PC.
+
+## Known issues
+
+| Issue | Status |
+|---|---|
+| Opening **Projector control** crashes the Flipper with "Out of memory" | Open, found on hardware. Building the list of command files needs more memory than is free at that point. Until it is fixed, avoid Projector control. |
 
 ## Build
 
