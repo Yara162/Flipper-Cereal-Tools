@@ -202,33 +202,45 @@ static CatalogEntry entry(const char* id, const char* name, bool user, bool brok
 }
 
 static void test_catalog_merge_user_wins(void) {
-    CatalogEntry builtin[] = {entry("samsung_mdc", "Samsung MDC", false, false), entry("lg_ascii", "LG", false, false)};
-    CatalogEntry user[] = {entry("samsung_mdc", "Samsung MDC (mine)", true, false)};
-    CatalogEntry out[8];
-    size_t n = catalog_merge(builtin, 2, user, 1, out, 8);
+    // one table: built-in entries first, then the user's
+    CatalogEntry t[8] = {
+        entry("samsung_mdc", "Samsung MDC", false, false), entry("lg_ascii", "LG", false, false),
+        entry("samsung_mdc", "Samsung MDC (mine)", true, false)};
+    size_t n = catalog_merge(t, 2, 1);
     CHECK(n == 2);
-    CHECK(strcmp(out[0].id, "lg_ascii") == 0); // sorted by name
-    CHECK(strcmp(out[1].id, "samsung_mdc") == 0 && out[1].user);
+    CHECK(strcmp(t[0].id, "lg_ascii") == 0); // sorted by name
+    CHECK(strcmp(t[1].id, "samsung_mdc") == 0 && t[1].user);
 }
 
 static void test_catalog_merge_keeps_broken(void) {
-    CatalogEntry user[] = {entry("", "bad_file.json", true, true), entry("mine", "Mine", true, false)};
-    CatalogEntry out[8];
-    size_t n = catalog_merge(NULL, 0, user, 2, out, 8);
+    CatalogEntry t[8] = {entry("", "bad_file.json", true, true), entry("mine", "Mine", true, false)};
+    size_t n = catalog_merge(t, 0, 2);
     CHECK(n == 2);
-    CHECK(out[0].broken);
+    CHECK(t[0].broken);
 }
 
-static void test_catalog_merge_respects_max(void) {
-    CatalogEntry builtin[] = {entry("a", "A", false, false), entry("b", "B", false, false), entry("c", "C", false, false)};
-    CatalogEntry out[2];
-    CHECK(catalog_merge(builtin, 3, NULL, 0, out, 2) == 2);
+static void test_catalog_merge_broken_user_does_not_hide_builtin(void) {
+    CatalogEntry t[8] = {entry("lg_ascii", "LG", false, false), entry("", "lg.json", true, true)};
+    CHECK(catalog_merge(t, 1, 1) == 2);
+}
+
+static void test_catalog_merge_several_overrides(void) {
+    CatalogEntry t[8] = {
+        entry("a", "A", false, false), entry("b", "B", false, false), entry("c", "C", false, false),
+        entry("c", "C mine", true, false), entry("a", "A mine", true, false), entry("z", "Z mine", true, false)};
+    size_t n = catalog_merge(t, 3, 3);
+    CHECK(n == 4);
+    CHECK(strcmp(t[0].name, "A mine") == 0 && t[0].user);
+    CHECK(strcmp(t[1].name, "B") == 0 && !t[1].user);
+    CHECK(strcmp(t[2].name, "C mine") == 0);
+    CHECK(strcmp(t[3].name, "Z mine") == 0);
 }
 
 int main(void) {
     RUN(test_catalog_merge_user_wins);
     RUN(test_catalog_merge_keeps_broken);
-    RUN(test_catalog_merge_respects_max);
+    RUN(test_catalog_merge_broken_user_does_not_hide_builtin);
+    RUN(test_catalog_merge_several_overrides);
     RUN(test_parses_full_file);
     RUN(test_text_command_and_show_rules);
     RUN(test_missing_comma_reports_line);

@@ -82,24 +82,23 @@ static size_t scan_dir(
 }
 
 size_t catalog_scan(const char* category, bool include_builtin, const char* segment, CatalogEntry* out, size_t max) {
+    // Built-in entries go first in `out`, the owner's after them; merged in place. One table and
+    // one CommandSet at a time keep the peak low (opening a list used to run out of memory).
     Storage* storage = furi_record_open(RECORD_STORAGE);
-    CommandSet* set = cmdset_shared_set(); // the command screen is not showing while lists are built
     char* buf = malloc(FILE_MAX);
-    CatalogEntry* builtin = malloc(sizeof(CatalogEntry) * CATALOG_MAX);
-    CatalogEntry* user = malloc(sizeof(CatalogEntry) * CATALOG_MAX);
-    size_t nb = 0, nu;
+    CommandSet* set = malloc(sizeof(CommandSet));
+    size_t nb = 0;
     if(include_builtin && category) {
         char dir[48];
         snprintf(dir, sizeof(dir), "%s/%ss", APP_ASSETS, category); // displays, projectors
-        nb = scan_dir(storage, dir, false, category, segment, set, buf, builtin, CATALOG_MAX);
+        nb = scan_dir(storage, dir, false, category, segment, set, buf, out, max);
     }
-    nu = scan_dir(storage, COMMANDS_DIR, true, category, segment, set, buf, user, CATALOG_MAX);
-    size_t n = catalog_merge(builtin, nb, user, nu, out, max);
-    free(builtin);
-    free(user);
+    size_t nu = scan_dir(storage, COMMANDS_DIR, true, category, segment, set, buf, out + nb, max - nb);
+    free(set);
     free(buf);
     furi_record_close(RECORD_STORAGE);
-    return n;
+    FURI_LOG_I("CerealTools", "list built: %u files, %u bytes free", (unsigned)(nb + nu), (unsigned)memmgr_get_free_heap());
+    return catalog_merge(out, nb, nu);
 }
 
 bool catalog_seed_example(void) {

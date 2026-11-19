@@ -400,21 +400,18 @@ bool cmdfile_parse(const char* json, size_t len, CommandSet* out, CmdFileError* 
     return ok;
 }
 
-size_t catalog_merge(
-    const CatalogEntry* builtin,
-    size_t nb,
-    const CatalogEntry* user,
-    size_t nu,
-    CatalogEntry* out,
-    size_t max) {
+size_t catalog_merge(CatalogEntry* entries, size_t nb, size_t nu) {
+    // drop each built-in entry that an owner file overrides, keeping order
     size_t n = 0;
-    for(size_t i = 0; i < nu && n < max; i++) out[n++] = user[i];
-    for(size_t i = 0; i < nb && n < max; i++) {
+    for(size_t i = 0; i < nb + nu; i++) {
         bool replaced = false;
-        for(size_t j = 0; j < nu; j++)
-            if(!user[j].broken && strcmp(user[j].id, builtin[i].id) == 0) replaced = true;
-        if(!replaced) out[n++] = builtin[i];
+        for(size_t j = nb; i < nb && j < nb + nu; j++)
+            if(!entries[j].broken && strcmp(entries[j].id, entries[i].id) == 0) replaced = true;
+        if(replaced) continue;
+        if(n != i) entries[n] = entries[i];
+        n++;
     }
+    CatalogEntry* out = entries;
     // insertion sort by name, case-insensitive; lists are short
     for(size_t i = 1; i < n; i++) {
         CatalogEntry e = out[i];

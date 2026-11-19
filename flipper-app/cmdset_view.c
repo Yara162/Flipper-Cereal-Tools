@@ -51,11 +51,6 @@ typedef struct {
 } CmdSetModel;
 
 static uint32_t cmdset_back = AppViewMenu;
-static CommandSet* shared_set;
-
-CommandSet* cmdset_shared_set(void) {
-    return shared_set;
-}
 
 // --- list helpers ---
 
@@ -309,6 +304,10 @@ static bool input(InputEvent* event, void* context) {
         if(event->key == InputKeyOk && is_short) send(app, m, m->command);
         if(event->key == InputKeyLeft && is_short) m->hex_rx = !m->hex_rx;
     }
+    if(go_back) {
+        free(m->set); // 19 KB: held only while a command list is open
+        m->set = NULL;
+    }
     view_commit_model(view, true);
     if(open_settings) app_open_settings(app, AppViewCmdSet);
     if(go_back) app_switch(app, cmdset_back);
@@ -339,9 +338,12 @@ void cmdset_view_open(App* app, const char* path, uint32_t back) {
     furi_record_close(RECORD_STORAGE);
     buf[len] = 0;
     CmdFileError err;
+    if(!m->set) m->set = malloc(sizeof(CommandSet));
     bool ok = cmdfile_parse(buf, len, m->set, &err);
     free(buf);
     if(!ok) {
+        free(m->set);
+        m->set = NULL;
         view_commit_model(app->cmdset_view, false);
         char title[24], name[26], l1[26], l2[26];
         const char* slash = strrchr(path, '/');
@@ -373,9 +375,7 @@ View* cmdset_view_alloc(App* app) {
     view_set_context(view, app);
     view_allocate_model(view, ViewModelTypeLocking, sizeof(CmdSetModel));
     CmdSetModel* m = view_get_model(view);
-    m->set = malloc(sizeof(CommandSet));
-    memset(m->set, 0, sizeof(CommandSet));
-    shared_set = m->set;
+    m->set = NULL; // allocated when a file is opened
     view_commit_model(view, false);
     view_set_draw_callback(view, draw);
     view_set_input_callback(view, input);
@@ -387,7 +387,7 @@ View* cmdset_view_alloc(App* app) {
 void cmdset_view_free(View* view) {
     CmdSetModel* m = view_get_model(view);
     free(m->set);
-    shared_set = NULL;
+    m->set = NULL;
     view_commit_model(view, false);
     view_free(view);
 }

@@ -239,7 +239,7 @@ baud scoring, and every built-in command file) is tested on a PC.
 
 | Issue | Status |
 |---|---|
-| Opening **Projector control** or **Custom commands** crashes the Flipper with "Out of memory" | Open, found on hardware. Building the list of command files needs more memory than is free at that point. Until it is fixed, avoid both tools. |
+| Opening **Projector control** or **Custom commands** crashes the Flipper with "Out of memory" | Found on hardware; fix waiting for a hardware test. Echo, Sniffer and the command screen held about 37 KB for the whole time the app ran, and building a list asked for about 40 KB more on top. They now hold memory only while open, and the list is built in one table, so a list now needs about 35 KB in all. |
 
 ## Build
 

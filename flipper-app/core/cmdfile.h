@@ -91,12 +91,7 @@ typedef struct {
     char error[48];
 } CatalogEntry;
 
-// Combines built-in and owner entries: an owner entry replaces a built-in one with the same
-// id; broken files stay listed so their error can be shown. Output sorted by name.
-size_t catalog_merge(
-    const CatalogEntry* builtin,
-    size_t nb,
-    const CatalogEntry* user,
-    size_t nu,
-    CatalogEntry* out,
-    size_t max);
+// Merges one table in place: entries[0..nb) are built-in, entries[nb..nb+nu) are the owner's.
+// An owner entry replaces a built-in one with the same id; broken files stay listed so their
+// error can be shown. Sorted by name; returns the new count.
+size_t catalog_merge(CatalogEntry* entries, size_t nb, size_t nu);

@@ -7,7 +7,7 @@
 #define ROWS 4
 
 typedef struct {
-    MsgRing ring;
+    MsgRing* ring; // only while the tool is open (Echo and Sniffer would hold 17 KB otherwise)
     MsgSplitter splitter;
     uint32_t start_ms;
     bool hex;
@@ -31,10 +31,10 @@ static void draw(Canvas* canvas, void* model) {
         snprintf(buf, sizeof(buf), "%s", m->hex ? "HEX" : "");
     canvas_draw_str_aligned(canvas, 127, 8, AlignRight, AlignBottom, buf);
     canvas_draw_line(canvas, 0, 10, 127, 10);
-    if(!m->ring.count)
+    if(!m->ring || !m->ring->count)
         canvas_draw_str(canvas, 1, 22, "Listening...");
     else
-        msgring_draw(canvas, &m->ring, 19, ROWS, m->hex, true, m->start_ms);
+        msgring_draw(canvas, m->ring, 19, ROWS, m->hex, true, m->start_ms);
     canvas_draw_line(canvas, 0, 54, 127, 54);
     if(m->status[0])
         snprintf(buf, sizeof(buf), "%s", m->status);
@@ -64,7 +64,7 @@ static void log_message(SnifferModel* m, const Message* msg) {
 }
 
 static void add(SnifferModel* m, const Message* msg) {
-    msgring_add(&m->ring, msg);
+    msgring_add(m->ring, msg);
     m->messages++;
     log_message(m, msg);
 }
@@ -124,8 +124,8 @@ static bool input(InputEvent* event, void* context) {
     SnifferModel* m = view_get_model(view);
     if(event->key == InputKeyOk && is_short) toggle_log(app, m);
     if(event->key == InputKeyLeft && is_short) m->hex = !m->hex;
-    if(event->key == InputKeyUp && step) msgring_scroll(&m->ring, 1, ROWS);
-    if(event->key == InputKeyDown && step) msgring_scroll(&m->ring, -1, ROWS);
+    if(event->key == InputKeyUp && step) msgring_scroll(m->ring, 1, ROWS);
+    if(event->key == InputKeyDown && step) msgring_scroll(m->ring, -1, ROWS);
     if(event->key != InputKeyOk) m->status[0] = 0;
     view_commit_model(view, true);
     return true;
@@ -135,8 +135,13 @@ static void enter(void* context) {
     App* app = context;
     SnifferModel* m = view_get_model(app->sniffer_view);
     // Returning from the settings screen keeps the list; a fresh visit starts over
-    if(!m->log && app->settings_back != AppViewSniffer) {
+    if((!m->log && app->settings_back != AppViewSniffer) || !m->ring) {
+        free(m->ring);
+        File* log = m->log;
         memset(m, 0, sizeof(*m));
+        m->log = log;
+        m->ring = malloc(sizeof(MsgRing));
+        memset(m->ring, 0, sizeof(MsgRing));
         m->start_ms = furi_get_tick();
     }
     app->settings_back = AppViewMenu;
@@ -156,6 +161,8 @@ static void leave(void* context) {
         log_close(m->log);
         m->log = NULL;
     }
+    free(m->ring);
+    m->ring = NULL;
     view_commit_model(app->sniffer_view, false);
 }
 
@@ -171,5 +178,9 @@ View* sniffer_view_alloc(App* app) {
 }
 
 void sniffer_view_free(View* view) {
+    SnifferModel* m = view_get_model(view);
+    free(m->ring);
+    m->ring = NULL;
+    view_commit_model(view, false);
     view_free(view);
 }

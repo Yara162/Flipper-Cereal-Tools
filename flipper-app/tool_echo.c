@@ -7,7 +7,7 @@
 #define ROWS 4
 
 typedef struct {
-    MsgRing ring;
+    MsgRing* ring; // only while the tool is open (Echo and Sniffer would hold 17 KB otherwise)
     MsgSplitter splitter;
     bool hex, auto_echo;
     uint32_t messages, bytes, echoed;
@@ -24,10 +24,10 @@ static void draw(Canvas* canvas, void* model) {
     canvas_draw_str(canvas, 1, 8, buf);
     canvas_draw_str_aligned(canvas, 127, 8, AlignRight, AlignBottom, m->auto_echo ? "AUTO" : (m->hex ? "HEX" : ""));
     canvas_draw_line(canvas, 0, 10, 127, 10);
-    if(!m->ring.count)
+    if(!m->ring || !m->ring->count)
         canvas_draw_str(canvas, 1, 22, "Waiting for data...");
     else
-        msgring_draw(canvas, &m->ring, 19, ROWS, m->hex, false, 0);
+        msgring_draw(canvas, m->ring, 19, ROWS, m->hex, false, 0);
     canvas_draw_line(canvas, 0, 54, 127, 54);
     if(m->status[0])
         snprintf(buf, sizeof(buf), "%s", m->status);
@@ -59,7 +59,7 @@ static void tick(App* app, void* context) {
         for(size_t i = 0; i < n; i++) {
             m->bytes++;
             if(msgsplit_feed(&m->splitter, in[i].byte, in[i].at_ms, &msg)) {
-                msgring_add(&m->ring, &msg);
+                msgring_add(m->ring, &msg);
                 m->messages++;
                 if(m->auto_echo) send_back(app, m, &msg);
                 changed = true;
@@ -69,7 +69,7 @@ static void tick(App* app, void* context) {
     n = total;
     // only judge a quiet gap once the queue is empty, or a backlog looks like silence
     if(total < SERIAL_DRAIN_MAX && msgsplit_poll(&m->splitter, furi_get_tick(), &msg)) {
-        msgring_add(&m->ring, &msg);
+        msgring_add(m->ring, &msg);
         m->messages++;
         if(m->auto_echo) send_back(app, m, &msg);
         changed = true;
@@ -93,8 +93,8 @@ static void save(App* app, EchoModel* m) {
     const size_t text_size = MSG_MAX * 4 + 8, hex_size = MSG_MAX * 3 + 8;
     char* text = malloc(text_size);
     char* hex = malloc(hex_size);
-    for(uint8_t i = 0; i < m->ring.count; i++) {
-        const Message* msg = msgring_get(&m->ring, i);
+    for(uint8_t i = 0; i < m->ring->count; i++) {
+        const Message* msg = msgring_get(m->ring, i);
         fmt_text(msg->data, msg->len, text, text_size);
         fmt_hex(msg->data, msg->len, hex, hex_size);
         log_line(f, text);
@@ -122,7 +122,7 @@ static bool input(InputEvent* event, void* context) {
     }
     EchoModel* m = view_get_model(view);
     if(event->key == InputKeyOk && is_short) {
-        const Message* last = msgring_newest(&m->ring);
+        const Message* last = msgring_newest(m->ring);
         if(last)
             send_back(app, m, last);
         else
@@ -136,9 +136,9 @@ static bool input(InputEvent* event, void* context) {
         save(app, m);
     } else if(event->key == InputKeyUp && step) {
         m->status[0] = 0;
-        msgring_scroll(&m->ring, 1, ROWS);
+        msgring_scroll(m->ring, 1, ROWS);
     } else if(event->key == InputKeyDown && step) {
-        msgring_scroll(&m->ring, -1, ROWS);
+        msgring_scroll(m->ring, -1, ROWS);
     }
     view_commit_model(view, true);
     return true;
@@ -148,7 +148,12 @@ static void enter(void* context) {
     App* app = context;
     EchoModel* m = view_get_model(app->echo_view);
     // returning from the settings screen keeps the list; a fresh visit starts over
-    if(app->settings_back != AppViewEcho) memset(m, 0, sizeof(*m));
+    if(app->settings_back != AppViewEcho || !m->ring) {
+        free(m->ring);
+        memset(m, 0, sizeof(*m));
+        m->ring = malloc(sizeof(MsgRing));
+        memset(m->ring, 0, sizeof(MsgRing));
+    }
     app->settings_back = AppViewMenu;
     msgsplit_init(&m->splitter, msgsplit_gap_for_baud(app->config.baud));
     view_commit_model(app->echo_view, true);
@@ -160,6 +165,11 @@ static void enter(void* context) {
 static void leave(void* context) {
     App* app = context;
     app->tick = NULL;
+    if(app->settings_back == AppViewEcho) return; // just visiting settings: keep the list
+    EchoModel* m = view_get_model(app->echo_view);
+    free(m->ring);
+    m->ring = NULL;
+    view_commit_model(app->echo_view, false);
 }
 
 View* echo_view_alloc(App* app) {
@@ -174,5 +184,9 @@ View* echo_view_alloc(App* app) {
 }
 
 void echo_view_free(View* view) {
+    EchoModel* m = view_get_model(view);
+    free(m->ring);
+    m->ring = NULL;
+    view_commit_model(view, false);
     view_free(view);
 }
