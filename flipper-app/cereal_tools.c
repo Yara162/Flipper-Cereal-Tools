@@ -6,6 +6,7 @@
 #include "tool_custom.h"
 #include "tool_devices.h"
 #include "tool_visca.h"
+#include "tool_baud.h"
 #include "cmdset_view.h"
 #include "catalog.h"
 
@@ -98,12 +99,14 @@ static void menu_callback(void* context, uint32_t index) {
     case MenuVisca:
         app_switch(app, AppViewVisca);
         break;
+    case MenuBaud:
+        app_switch(app, AppViewBaud);
+        break;
     case MenuSniffer:
         app->settings_back = AppViewMenu;
         app_switch(app, AppViewSniffer);
         break;
     default:
-        app_show_message(app, "Not built yet", "This tool arrives in a", "later step of the build.", "", AppViewMenu);
         break;
     }
 }
@@ -174,6 +177,9 @@ int32_t cereal_tools_app(void* p) {
     app->visca_view = visca_view_alloc(app);
     view_dispatcher_add_view(app->dispatcher, AppViewVisca, app->visca_view);
 
+    app->baud_view = baud_view_alloc(app);
+    view_dispatcher_add_view(app->dispatcher, AppViewBaud, app->baud_view);
+
     view_dispatcher_attach_to_gui(app->dispatcher, app->gui, ViewDispatcherTypeFullscreen);
     if(app->port)
         app_switch(app, AppViewMenu);
@@ -195,6 +201,8 @@ int32_t cereal_tools_app(void* p) {
     cmdset_view_free(app->cmdset_view);
     view_dispatcher_remove_view(app->dispatcher, AppViewVisca);
     visca_view_free(app->visca_view);
+    view_dispatcher_remove_view(app->dispatcher, AppViewBaud);
+    baud_view_free(app->baud_view);
     catalog_free();
     submenu_free(app->menu);
     submenu_free(app->list);
