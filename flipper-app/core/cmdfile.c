@@ -6,7 +6,7 @@
 #define JSMN_STATIC
 #define JSMN_STRICT
 #define JSMN_PARENT_LINKS
-#include "jsmn.h"
+#include "../lib/jsmn/jsmn.h"
 
 typedef struct {
     const char* js;

@@ -1,0 +1,12 @@
+App(
+    appid="cereal_tools",
+    name="Cereal Tools",
+    apptype=FlipperAppType.EXTERNAL,
+    entry_point="cereal_tools_app",
+    requires=["gui", "storage"],
+    stack_size=4 * 1024,
+    fap_category="GPIO",
+    fap_version="0.1",
+    fap_description="RS-232 tools for AV commissioning with the Flip'n Cereal HAT",
+    fap_file_assets="assets",
+)
