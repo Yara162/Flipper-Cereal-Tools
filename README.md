@@ -1,5 +1,7 @@
 # Flipper Cereal Tools
 
+[![flipper-ci](https://github.com/Yara162/flipper-cereal-tools/actions/workflows/flipper-ci.yml/badge.svg)](https://github.com/Yara162/flipper-cereal-tools/actions/workflows/flipper-ci.yml)
+
 A Flipper Zero app with seven RS-232 tools for AV commissioning, made for the
 [Rabbit-Labs Flip'n Cereal HAT](https://rabbit-labs.com/product/flipper-zero-flipn-cereal-rs232-by-rabbit-labs/).
 Test a serial line and the device at the far end without a laptop: prove a display or
