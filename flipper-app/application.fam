@@ -6,6 +6,7 @@ App(
     requires=["gui", "storage"],
     stack_size=4 * 1024,
     fap_category="GPIO",
+    fap_icon="icon.png",
     fap_version="0.1",
     fap_description="RS-232 tools for AV commissioning with the Flip'n Cereal HAT",
     fap_file_assets="assets",
